@@ -3,6 +3,7 @@
 #define __LOG_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdarg.h>
 
 /*** DEFINES ****************************************************************/
@@ -48,12 +49,12 @@
 /*** DECLARATION ************************************************************/
 
 typedef enum {
-    LOG_DNS_DEFEND,
-    LOG_BPF,
-    LOG_PF,
+    LOG_DNS_DEFENDER,
+    LOG_SOCKET_BPF,
+    LOG_FIREWALL_PF,
     LOG_HEADER_ETHERNET,
     LOG_HEADER_IPV4,
-    LOG_HEADER_UDP,
+    LOG_HEADER_UDPV4,
     LOG_HEADER_DNS,
 } log_category_t;
 

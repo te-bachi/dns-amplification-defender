@@ -12,8 +12,45 @@
 #include <net/bpf.h>
 #include <net/if.h>
 
+#include "packet/packet.h"
+#include "packet/port.h"
 
 #define BPF_DEVICE_MAX      99
+
+static struct bpf_insn bpf_filter[] = {
+    
+            /* Make sure this is an IP packet... */
+/*  1 */    BPF_STMT(BPF_LD + BPF_H + BPF_ABS, 12),                         /**< Copy absolute (BPF_ABS) half-word (BPF_H) value 12 to accumulator: packet offset, 6 Dest. MAC + 6 Src. MAC = 12 */
+/*  2 */    BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_IPV4, 0, 8),      /**< Jump to offset if accumulator equals (BPF_JEQ) to constant (BPF_K) ETHERTYPE_IP:
+                                                                             *   pc = 2, if true: offset 0, otherwise: offset 8 (pc += (A == k) ? jt : jf) */
+            /* Make sure it's a UDP packet... */
+/*  3 */    BPF_STMT(BPF_LD + BPF_B + BPF_ABS, 23),                         /**< Copy absolute byte (BPF_B) value 23 to accumulator: packet offset */
+/*  4 */    BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, IPV4_PROTOCOL_UDP, 0, 6),   /**< Jump to offset if accumulator equals (BPF_JEQ) to constant (BPF_K) IPPROTO_UDP:
+                                                                              *   pc = 4, if true: 4 + 0 = 4, otherwise: 4 + 6 = 10 */
+
+            /* Make sure this isn't a fragment... */
+/*  5 */    BPF_STMT(BPF_LD + BPF_H + BPF_ABS, 20),                         /**< Copy absolute half-word value 20 to accumulator: packet offset */
+/*  6 */    BPF_JUMP(BPF_JMP + BPF_JSET + BPF_K, 0x1fff, 4, 0),             /**< Jump to offset if accumulator bitwise AND (BPF_JSET) to constant (BPF_K) BPF_JSET: */
+
+            /* Get the IP header length... */
+/*  7 */    BPF_STMT(BPF_LDX + BPF_B + BPF_MSH, 14),
+
+            /* Make sure it's to the right port... */
+/*  8 */    BPF_STMT(BPF_LD + BPF_H + BPF_IND, 16),
+/*  9 */    BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, PORT_DNS, 0, 1),
+
+            /* If we passed all the tests, ask for the whole packet. */
+/* 10 */    BPF_STMT(BPF_RET+BPF_K, (u_int)-1),
+
+            /* Otherwise, drop it. */
+/* 11 */    BPF_STMT(BPF_RET+BPF_K, 0)
+
+};
+
+static struct bpf_program bpf_program = {
+    sizeof(bpf_filter) / sizeof(struct bpf_insn),
+    (struct bpf_insn *) &bpf_filter
+};
 
 int
 bpf_open(const char *iface, const unsigned int timeout, const unsigned int *buffer_len)
@@ -67,6 +104,12 @@ bpf_open(const char *iface, const unsigned int timeout, const unsigned int *buff
     tv_timeout.tv_usec  = 0;
     
     if (ioctl(bpf, BIOCSRTIMEOUT, &tv_timeout) == -1) {
+        fprintf(stderr, "ERROR: Could not set timeout: %s\n", strerror(errno));
+        return -1;
+    }
+    
+    /* Set filter */
+    if (ioctl(bpf, BIOCSETF, (struct bpf_program *) &bpf_program) == -1) {
         fprintf(stderr, "ERROR: Could not set timeout: %s\n", strerror(errno));
         return -1;
     }

@@ -11,9 +11,12 @@ GLOBAL_LDFLAGS              =
 dns-defend_CFLAGS           = 
 dns-defend_LDFLAGS          = 
 dns-defend_SOURCE           = main.c \
+                              object.c \
                               dns-defend.c \
                               bpf.c \
                               pf.c \
+                              log.c \
+                              log_network.c \
                               packet/net_address.c \
                               packet/raw_packet.c \
                               packet/packet.c \
@@ -21,7 +24,6 @@ dns-defend_SOURCE           = main.c \
                               packet/ipv4_header.c \
                               packet/udpv4_header.c \
                               packet/dns_header.c
-                              
 
 include Makefile.inc
 
