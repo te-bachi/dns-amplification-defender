@@ -1,5 +1,5 @@
 
-PROGRAMS                    = dns-defend
+PROGRAMS                    = dnsdefend
 
 CC                          = gcc47
 GLOBAL_CFLAGS               = -Wall -ggdb -std=gnu99 -fms-extensions -Iinclude
@@ -8,11 +8,11 @@ GLOBAL_LDFLAGS              =
 ### DNS-DEFEND ################################################################
 
 
-dns-defend_CFLAGS           = 
-dns-defend_LDFLAGS          = 
-dns-defend_SOURCE           = main.c \
+dnsdefend_CFLAGS            = 
+dnsdefend_LDFLAGS           = 
+dnsdefend_SOURCE            = main.c \
                               object.c \
-                              dns-defend.c \
+                              dns_defender.c \
                               bpf.c \
                               pf.c \
                               log.c \
