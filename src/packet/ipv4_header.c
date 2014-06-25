@@ -5,16 +5,16 @@
 
 const static uint16_t CHECKSUM_ZERO = 0x0000;
 
-static ipv4_header_t ipv4_header;
+static ipv4_header_t _ipv4;
 
 ipv4_header_t *
 ipv4_header_new(void)
 {
-    memset(&ipv4_header, 0, sizeof(ipv4_header_t));
-    return &ipv4_header;
+    memset(&_ipv4, 0, sizeof(_ipv4));
+    return &_ipv4;
 }
 void
-ipv4_header_free(ipv4_header_t *ipv4_header)
+ipv4_header_free(ipv4_header_t *ipv4)
 {
     /* do nothing */
 }
@@ -28,9 +28,8 @@ ipv4_header_free(ipv4_header_t *ipv4_header)
  * @return                          number of bytes written to raw packet
  ***************************************************************************/
 packet_len_t
-ipv4_header_encode(packet_t *packet, raw_packet_t *raw_packet, packet_offset_t ipv4_offset)
+ipv4_header_encode(ipv4_header_t *ipv4, raw_packet_t *raw_packet, packet_offset_t ipv4_offset)
 {
-    ipv4_header_t  *ipv4 = packet->ether->ipv4;
     packet_len_t    len;
     
     /* IPv4 */
@@ -40,7 +39,7 @@ ipv4_header_encode(packet_t *packet, raw_packet_t *raw_packet, packet_offset_t i
     
     /* decide */
     switch (ipv4->protocol) {
-        case IPV4_PROTOCOL_UDP:     len = udpv4_header_encode(packet, raw_packet, ipv4_offset + IPV4_HEADER_LEN);   break;
+        case IPV4_PROTOCOL_UDP:     len = udpv4_header_encode(ipv4, raw_packet, ipv4_offset + IPV4_HEADER_LEN);   break;
         default:                                                                                                            return 0;
     }
     
@@ -80,25 +79,22 @@ ipv4_header_encode(packet_t *packet, raw_packet_t *raw_packet, packet_offset_t i
  * @param  raw_packet               raw packet to be read
  * @param  ipv4_offset                offset from origin to ip packet
  ***************************************************************************/
-void
-ipv4_header_decode(packet_t *packet, raw_packet_t *raw_packet, packet_offset_t ipv4_offset)
+ipv4_header_t *
+ipv4_header_decode(raw_packet_t *raw_packet, packet_offset_t ipv4_offset)
 {
     ipv4_header_t  *ipv4 = ipv4_header_new();
-    
-    /* add IPv4 address */
-    packet->ether->ipv4 = ipv4;
     
     /* pre-pre-fetch */
     ipv4->ver_ihl             = raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_VERSION];                                 /**< IP version */
     
     if (ipv4->version == IPV4_HEADER_VERSION) {
         
-        packet->type |= PACKET_TYPE_IPV4;
+        //packet->type |= PACKET_TYPE_IPV4;
         
         if (raw_packet->len < (ipv4_offset + IPV4_HEADER_LEN)) {
             LOG_PRINTLN(LOG_HEADER_IPV4, LOG_ERROR, ("decode IPv4 packet: size too small (present=%u, required=%u)", raw_packet->len, (ipv4_offset + IPV4_HEADER_LEN)));
-            packet->type |= PACKET_TYPE_IGNORE;
-            return;
+            //packet->type |= PACKET_TYPE_IGNORE;
+            return NULL;
         }
         
         /* pre-fetch */
@@ -106,13 +102,15 @@ ipv4_header_decode(packet_t *packet, raw_packet_t *raw_packet, packet_offset_t i
 
         /* decide */
         switch (ipv4->protocol) {
-            case IPV4_PROTOCOL_UDP:     udpv4_header_decode(packet, raw_packet, ipv4_offset + IPV4_HEADER_LEN);   break;
-            default:                    packet->type |= PACKET_TYPE_IGNORE;                                          return;
+            case IPV4_PROTOCOL_UDP:     ipv4->udpv4 = udpv4_header_decode(raw_packet, ipv4_offset + IPV4_HEADER_LEN);   break;
+            default:                    /* packet->type |= PACKET_TYPE_IGNORE;   */                                       return NULL;
         }
         
+        /*
         if (packet->type & PACKET_TYPE_IGNORE) {
             return;
         }
+        */
         
         /* fetch the rest */
         ipv4->tos        = raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_TOS];                                          /**< TOS (Type of Service) */
@@ -125,10 +123,12 @@ ipv4_header_decode(packet_t *packet, raw_packet_t *raw_packet, packet_offset_t i
         memcpy(&(ipv4->dest.addr), &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_DEST]), IPV4_ADDRESS_LEN);           /**< Destination Address */
         
         // TODO: Checksum (over ip-header) check
+        return ipv4;
         
     } else {
         LOG_PRINTLN(LOG_HEADER_IPV4, LOG_ERROR, ("no IPv4 header ?! raw=%u version=%u", ipv4->ver_ihl, ipv4->version));
-        packet->type |= PACKET_TYPE_IGNORE;
+        //packet->type |= PACKET_TYPE_IGNORE;
+        return NULL;
     }
 }
 

@@ -29,10 +29,10 @@ struct _udpv4_header_t {
     dns_header_t   *dns;
 };
 
-udpv4_header_t  *udpv4_header_new   (void);
-void            udpv4_header_free   (udpv4_header_t *udpv4_header);
-packet_len_t    udpv4_header_encode (packet_t *packet, raw_packet_t *raw_packet, packet_offset_t udpv4_offset);
-void            udpv4_header_decode (packet_t *packet, raw_packet_t *raw_packet, packet_offset_t udpv4_offset);
+udpv4_header_t *udpv4_header_new    (void);
+void            udpv4_header_free   (udpv4_header_t *udpv4);
+packet_len_t    udpv4_header_encode (ipv4_header_t *ipv4, raw_packet_t *raw_packet, packet_offset_t udpv4_offset);
+udpv4_header_t *udpv4_header_decode (                     raw_packet_t *raw_packet, packet_offset_t udpv4_offset);
 
 #endif
 

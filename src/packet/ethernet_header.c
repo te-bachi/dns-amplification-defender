@@ -5,17 +5,17 @@
 #include <string.h>
 
 
-static ethernet_header_t ether_header;
+static ethernet_header_t _ether;
 
 ethernet_header_t *
 ethernet_header_new(void)
 {
-    memset(&ether_header, 0, sizeof(ethernet_header_t));
-    return &ether_header;
+    memset(&_ether, 0, sizeof(_ether));
+    return &_ether;
 }
 
 void
-ethernet_header_free(ethernet_header_t *ethernet_header)
+ethernet_header_free(ethernet_header_t *ether)
 {
     /* do nothing */
 }
@@ -28,15 +28,14 @@ ethernet_header_free(ethernet_header_t *ethernet_header)
  * @return                          number of bytes written to raw packet
  ***************************************************************************/
 packet_len_t
-ethernet_header_encode(packet_t *packet, raw_packet_t *raw_packet, packet_offset_t ethernet_offset)
+ethernet_header_encode(ethernet_header_t *ether, raw_packet_t *raw_packet, packet_offset_t ethernet_offset)
 {
-    ethernet_header_t  *ether = packet->ether;
     uint16_t            ethertype;
     packet_len_t        ethernet_len;   /**< length of this packet */
     packet_len_t        len;            /**< length of the whole packet */
     
     /* set packet length (= part of offset to upper layer paket) */
-    if (packet->type == ETHERTYPE_VLAN) {
+    if (ether->type == ETHERTYPE_VLAN) {
         ethertype           = ether->vlan.type;
         ethernet_len        = VLAN_HEADER_LEN;
     } else {
@@ -46,7 +45,7 @@ ethernet_header_encode(packet_t *packet, raw_packet_t *raw_packet, packet_offset
 
     /* decide */
     switch(ethertype) {
-        case ETHERTYPE_IPV4:    len = ipv4_header_encode(packet, raw_packet, ethernet_offset + ethernet_len);   break;
+        case ETHERTYPE_IPV4:    len = ipv4_header_encode(ether->ipv4, raw_packet, ethernet_offset + ethernet_len);   break;
         default:                                                                                                return 0;
     }
     
@@ -62,7 +61,7 @@ ethernet_header_encode(packet_t *packet, raw_packet_t *raw_packet, packet_offset
     uint16_to_uint8(&(raw_packet->data[ethernet_offset + ETHERNET_HEADER_OFFSET_TYPE]), &(ether->type));                           /**< Ethernet Type / VLAN TPID */
         
     /* VLAN tag? */
-    if (packet->type == ETHERTYPE_VLAN) {
+    if (ether->type == ETHERTYPE_VLAN) {
         uint16_to_uint8(&(raw_packet->data[ethernet_offset + VLAN_HEADER_OFFSET_VLAN]), &(ether->vlan.tci));                       /**< VLAN Tag Control Information */
         uint16_to_uint8(&(raw_packet->data[ethernet_offset + VLAN_HEADER_OFFSET_TYPE]), &(ether->vlan.type));                      /**< Ethernet Type */
     }
@@ -76,37 +75,37 @@ ethernet_header_encode(packet_t *packet, raw_packet_t *raw_packet, packet_offset
  * @param  this                     logical packet to be written
  * @param  raw_packet               raw packet to be read
  ***************************************************************************/
-void
-ethernet_header_decode(packet_t *packet, raw_packet_t *raw_packet, packet_offset_t ethernet_offset)
+ethernet_header_t *
+ethernet_header_decode(raw_packet_t *raw_packet, packet_offset_t ethernet_offset)
 {
     ethernet_header_t  *ether = ethernet_header_new();
     uint16_t            ethertype;
     packet_len_t        ethernet_len;   /**< length of this packet */
     
-    /* add Ethernet header */
-    packet->ether = ether;
-    
-    packet->type |= PACKET_TYPE_ETHERNET;
+    //packet->type |= PACKET_TYPE_ETHERNET;
     
     if (raw_packet->len < (ethernet_offset + ETHERNET_HEADER_LEN)) {
         LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_ERROR, ("decode Ethernet packet: size too small (present=%u, required=%u)", raw_packet->len, ethernet_offset + ETHERNET_HEADER_LEN));
-        packet->type |= PACKET_TYPE_IGNORE;
-        return;
+        //packet->type |= PACKET_TYPE_IGNORE;
+        return NULL;
     }
     
     /* pre-fetch */
     uint8_to_uint16(&(ether->type), &(raw_packet->data[ethernet_offset + ETHERNET_HEADER_OFFSET_TYPE]));                           /**< Ethernet Type / VLAN TPID */
     
     /* VLAN tag? */
-    if (packet->type == ETHERTYPE_VLAN) {
+    if (ether->type == ETHERTYPE_VLAN) {
         
         uint8_to_uint16(&(ether->vlan.tci),  &(raw_packet->data[ethernet_offset + VLAN_HEADER_OFFSET_VLAN]));                      /**< VLAN Tag Control Information */
         uint8_to_uint16(&(ether->vlan.type), &(raw_packet->data[ethernet_offset + VLAN_HEADER_OFFSET_TYPE]));                      /**< Ethernet Type */
 
-        LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("VLAN: tci=0x%04x vid=%u pcp=%u cfi=%u", ether->vlan.tci, ether->vlan.vid, ether->vlan.pcp, ether->vlan.dei));
+        LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("VLAN: tci=0x%04x vid=%u pcp=%u cfi=%u", ether->vlan.tci,
+                                                                                              ether->vlan.vid,
+                                                                                              ether->vlan.pcp,
+                                                                                              ether->vlan.dei));
 
         ethertype           = ether->vlan.type;
-        packet->type  |= PACKET_TYPE_VLAN;
+        //packet->type       |= PACKET_TYPE_VLAN;
         ethernet_len        = VLAN_HEADER_LEN;
 
     } else {
@@ -116,17 +115,21 @@ ethernet_header_decode(packet_t *packet, raw_packet_t *raw_packet, packet_offset
     
     /* decide */
     switch(ethertype) {
-        case ETHERTYPE_IPV4:    ipv4_header_decode(packet, raw_packet, ethernet_offset + ethernet_len);      break;
+        case ETHERTYPE_IPV4:    ether->ipv4 = ipv4_header_decode(raw_packet, ethernet_offset + ethernet_len);      break;
             
-        default:                packet->type |= PACKET_TYPE_IGNORE;                      return;
+        default:                /* packet->type |= PACKET_TYPE_IGNORE;    */                  return NULL;
     }
     
+    /*
     if (packet->type & PACKET_TYPE_IGNORE) {
-        return;
+        return NULL;
     }
+    */
     
     /* fetch the rest */
     memcpy(ether->dest.addr,  &(raw_packet->data[ethernet_offset + ETHERNET_HEADER_OFFSET_DEST]), sizeof(ether->dest.addr));      /**< Destination MAC */
     memcpy(ether->src.addr,   &(raw_packet->data[ethernet_offset + ETHERNET_HEADER_OFFSET_SRC]),  sizeof(ether->src.addr));       /**< Source MAC */
+    
+    return ether;
 }
 
