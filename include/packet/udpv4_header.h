@@ -30,7 +30,7 @@ struct _udpv4_header_t {
 };
 
 udpv4_header_t  *udpv4_header_new   (void);
-bool            udpv4_header_free   (udpv4_header_t *udpv4_header);
+void            udpv4_header_free   (udpv4_header_t *udpv4_header);
 packet_len_t    udpv4_header_encode (packet_t *packet, raw_packet_t *raw_packet, packet_offset_t udpv4_offset);
 void            udpv4_header_decode (packet_t *packet, raw_packet_t *raw_packet, packet_offset_t udpv4_offset);
 

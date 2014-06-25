@@ -67,7 +67,7 @@ struct _dns_header_t {
 };
 
 dns_header_t   *dns_header_new      (void);
-bool            dns_header_free     (dns_header_t *dns_header);
+void            dns_header_free     (dns_header_t *dns_header);
 packet_len_t    dns_header_encode   (packet_t *packet, raw_packet_t *raw_packet, packet_offset_t dns_offset);
 void            dns_header_decode   (packet_t *packet, raw_packet_t *raw_packet, packet_offset_t dns_offset);
 

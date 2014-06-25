@@ -12,6 +12,8 @@
 #include <net/bpf.h>
 #include <net/if.h>
 
+#include "log.h"
+
 #include "packet/packet.h"
 #include "packet/port.h"
 

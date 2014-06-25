@@ -54,7 +54,7 @@ struct _ethernet_header_t {
 };
 
 ethernet_header_t  *ethernet_header_new     (void);
-bool                ethernet_header_free    (ethernet_header_t *ethernet_header);
+void                ethernet_header_free    (ethernet_header_t *ethernet_header);
 packet_len_t        ethernet_header_encode  (packet_t *packet, raw_packet_t *raw_packet, packet_offset_t ethernet_offset);
 void                ethernet_header_decode  (packet_t *packet, raw_packet_t *raw_packet, packet_offset_t ethernet_offset);
 

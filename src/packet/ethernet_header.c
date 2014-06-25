@@ -4,6 +4,22 @@
 
 #include <string.h>
 
+
+static ethernet_header_t ether_header;
+
+ethernet_header_t *
+ethernet_header_new(void)
+{
+    memset(&ether_header, 0, sizeof(ethernet_header_t));
+    return &ether_header;
+}
+
+void
+ethernet_header_free(ethernet_header_t *ethernet_header)
+{
+    /* do nothing */
+}
+
 /****************************************************************************
  * ethernet_packet_encode
  *
@@ -14,7 +30,7 @@
 packet_len_t
 ethernet_header_encode(packet_t *packet, raw_packet_t *raw_packet, packet_offset_t ethernet_offset)
 {
-    ethernet_header_t  *ether;
+    ethernet_header_t  *ether = packet->ether;
     uint16_t            ethertype;
     packet_len_t        ethernet_len;   /**< length of this packet */
     packet_len_t        len;            /**< length of the whole packet */
@@ -63,9 +79,12 @@ ethernet_header_encode(packet_t *packet, raw_packet_t *raw_packet, packet_offset
 void
 ethernet_header_decode(packet_t *packet, raw_packet_t *raw_packet, packet_offset_t ethernet_offset)
 {
-    ethernet_header_t  *ether;
+    ethernet_header_t  *ether = ethernet_header_new();
     uint16_t            ethertype;
     packet_len_t        ethernet_len;   /**< length of this packet */
+    
+    /* add Ethernet header */
+    packet->ether = ether;
     
     packet->type |= PACKET_TYPE_ETHERNET;
     

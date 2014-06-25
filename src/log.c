@@ -5,16 +5,7 @@
 #include <time.h>
 #include <inttypes.h>
 
-bool log_enabled = false;
-
-typedef struct log_date_t      log_date_t;
-struct log_date_t {
-    uint8_t     msec;
-    uint8_t     sec;
-    uint8_t     min;
-    uint8_t     hour;
-    uint8_t     day;
-};
+bool log_enabled = true;
 
 log_level_t LOG_CATEGORY_LEVEL[] = {
     [LOG_DNS_DEFENDER]             = LOG_ERROR,
@@ -53,26 +44,6 @@ log_init()
 /*** MESSAGES ****************************************************************/
 
 /**
- * Get time from the system-clock and calculate time information
- *
- * @param now           reference to a date structure
- */
-static void log_date(log_date_t *now)
-{
-    /*
-    now->day  = sys_sec   / (60 * 60 * 24);
-    sys_sec  -= now->day  * (60 * 60 * 24);
-    now->hour = sys_sec   / (60 * 60);
-    sys_sec  -= now->hour * (60 * 60);
-    now->min  = sys_sec   / (60);
-    sys_sec  -= now->min  * (60);
-    
-    now->sec  = sys_sec;
-    now->msec = sys_msec;
-    */
-}
-
-/**
  * Print header information like time and category
  *
  * @param category      list of categories, see log.h
@@ -81,12 +52,15 @@ static void log_date(log_date_t *now)
 void
 log_print_header(log_category_t category, log_level_t level)
 {
+    time_t      now;
+    struct tm   local;
     
-    log_date_t     now;
-
-    log_date(&now);
+    now = time(NULL);
+    localtime_r(&now, &local);
     
-    LOG_PRINTF(LOG_STREAM, "[%04" PRIu8 " %02" PRIu8 ":%02" PRIu8 ":%02" PRIu8 ".%03" PRIu8 "]", now.day, now.hour, now.min, now.sec, now.msec);
+    LOG_PRINTF(LOG_STREAM, "[%02" PRId8 ".%02" PRId8 ".%04" PRId8 " %02" PRId8 ":%02" PRId8 ":%02" PRId8 "]",
+                           local.tm_mday, local.tm_mon, local.tm_year + 1900,
+                           local.tm_hour, local.tm_min, local.tm_sec);
 
     LOG_HEADER_CATEGORY(category);
     LOG_HEADER_LEVEL(level);

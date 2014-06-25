@@ -72,7 +72,7 @@ struct _ipv4_header_t {
 };
 
 ipv4_header_t  *ipv4_header_new     (void);
-bool            ipv4_header_free    (ipv4_header_t *ipv4_header);
+void            ipv4_header_free    (ipv4_header_t *ipv4_header);
 packet_len_t    ipv4_header_encode  (packet_t *packet, raw_packet_t *raw_packet, packet_offset_t ipv4_offset);
 void            ipv4_header_decode  (packet_t *packet, raw_packet_t *raw_packet, packet_offset_t ipv4_offset);
 
