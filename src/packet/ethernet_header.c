@@ -4,12 +4,16 @@
 
 #include <string.h>
 
+#define ETHERNET_FAILURE_EXIT   ethernet_header_free(ether); \
+                                return NULL
 
 static ethernet_header_t _ether;
 
 ethernet_header_t *
 ethernet_header_new(void)
 {
+    LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("Ethernet header new"));
+    
     memset(&_ether, 0, sizeof(_ether));
     return &_ether;
 }
@@ -17,7 +21,9 @@ ethernet_header_new(void)
 void
 ethernet_header_free(ethernet_header_t *ether)
 {
-    /* do nothing */
+    LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("Ethernet header free"));
+    
+    if (ether->ipv4 != NULL)    ipv4_header_free(ether->ipv4);
 }
 
 /****************************************************************************
@@ -45,8 +51,8 @@ ethernet_header_encode(ethernet_header_t *ether, raw_packet_t *raw_packet, packe
 
     /* decide */
     switch(ethertype) {
-        case ETHERTYPE_IPV4:    len = ipv4_header_encode(ether->ipv4, raw_packet, ethernet_offset + ethernet_len);   break;
-        default:                                                                                                return 0;
+        case ETHERTYPE_IPV4:    len = ipv4_header_encode(ether->ipv4, raw_packet, ethernet_offset + ethernet_len);  break;
+        default:                                                                                                    return 0;
     }
     
     if (len == 0) {
@@ -82,12 +88,9 @@ ethernet_header_decode(raw_packet_t *raw_packet, packet_offset_t ethernet_offset
     uint16_t            ethertype;
     packet_len_t        ethernet_len;   /**< length of this packet */
     
-    //packet->type |= PACKET_TYPE_ETHERNET;
-    
     if (raw_packet->len < (ethernet_offset + ETHERNET_HEADER_LEN)) {
         LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_ERROR, ("decode Ethernet packet: size too small (present=%u, required=%u)", raw_packet->len, ethernet_offset + ETHERNET_HEADER_LEN));
-        //packet->type |= PACKET_TYPE_IGNORE;
-        return NULL;
+        ETHERNET_FAILURE_EXIT;
     }
     
     /* pre-fetch */
@@ -105,7 +108,6 @@ ethernet_header_decode(raw_packet_t *raw_packet, packet_offset_t ethernet_offset
                                                                                               ether->vlan.dei));
 
         ethertype           = ether->vlan.type;
-        //packet->type       |= PACKET_TYPE_VLAN;
         ethernet_len        = VLAN_HEADER_LEN;
 
     } else {
@@ -115,16 +117,13 @@ ethernet_header_decode(raw_packet_t *raw_packet, packet_offset_t ethernet_offset
     
     /* decide */
     switch(ethertype) {
-        case ETHERTYPE_IPV4:    ether->ipv4 = ipv4_header_decode(raw_packet, ethernet_offset + ethernet_len);      break;
-            
-        default:                /* packet->type |= PACKET_TYPE_IGNORE;    */                  return NULL;
+        case ETHERTYPE_IPV4:    ether->ipv4 = ipv4_header_decode(raw_packet, ethernet_offset + ethernet_len);   break;
+        default:                                                                                                ETHERNET_FAILURE_EXIT;
     }
     
-    /*
-    if (packet->type & PACKET_TYPE_IGNORE) {
-        return NULL;
+    if (ether->ipv4 == NULL) {
+        ETHERNET_FAILURE_EXIT;
     }
-    */
     
     /* fetch the rest */
     memcpy(ether->dest.addr,  &(raw_packet->data[ethernet_offset + ETHERNET_HEADER_OFFSET_DEST]), sizeof(ether->dest.addr));      /**< Destination MAC */

@@ -2,12 +2,13 @@
 #include "packet/raw_packet.h"
 #include "log.h"
 
-static bool raw_packet_setup(raw_packet_t *raw_packet);
 static void raw_packet_destructor(void *ptr);
 
 static class_info_t class_info = {
     .size        = sizeof(raw_packet_t),
-    .destructor  = raw_packet_destructor
+    .destructor  = raw_packet_destructor,
+    .mem_alloc   = malloc,
+    .mem_free    = free
 };
 
 raw_packet_t *
@@ -17,10 +18,6 @@ raw_packet_new(void)
     
     raw_packet = object_new(&class_info);
     
-    if (!raw_packet_setup(raw_packet)) {
-        return NULL;
-    }
-    
     return raw_packet;
 }
 
@@ -28,19 +25,13 @@ bool
 raw_packet_init(raw_packet_t *raw_packet)
 {
     object_init(raw_packet, &class_info);
-    return raw_packet_setup(raw_packet);
-}
-
-static bool
-raw_packet_setup(raw_packet_t *raw_packet)
-{
     return true;
 }
 
 static void
 raw_packet_destructor(void *ptr)
 {
-    //
+    
 }
 
 /*

@@ -3,6 +3,9 @@
 
 #include <string.h>
 
+#define IPV4_FAILURE_EXIT   ipv4_header_free(ipv4); \
+                            return NULL
+
 const static uint16_t CHECKSUM_ZERO = 0x0000;
 
 static ipv4_header_t _ipv4;
@@ -10,13 +13,17 @@ static ipv4_header_t _ipv4;
 ipv4_header_t *
 ipv4_header_new(void)
 {
+    LOG_PRINTLN(LOG_HEADER_IPV4, LOG_DEBUG, ("IPv4 header new"));
+    
     memset(&_ipv4, 0, sizeof(_ipv4));
     return &_ipv4;
 }
 void
 ipv4_header_free(ipv4_header_t *ipv4)
 {
-    /* do nothing */
+    LOG_PRINTLN(LOG_HEADER_IPV4, LOG_DEBUG, ("IPv4 header free"));
+    
+    if (ipv4->udpv4 != NULL)    udpv4_header_free(ipv4->udpv4);
 }
 
 /****************************************************************************
@@ -39,8 +46,8 @@ ipv4_header_encode(ipv4_header_t *ipv4, raw_packet_t *raw_packet, packet_offset_
     
     /* decide */
     switch (ipv4->protocol) {
-        case IPV4_PROTOCOL_UDP:     len = udpv4_header_encode(ipv4, raw_packet, ipv4_offset + IPV4_HEADER_LEN);   break;
-        default:                                                                                                            return 0;
+        case IPV4_PROTOCOL_UDP:     len = udpv4_header_encode(ipv4, raw_packet, ipv4_offset + IPV4_HEADER_LEN);     break;
+        default:                                                                                                    return 0;
     }
     
     if (len == 0) {
@@ -52,7 +59,7 @@ ipv4_header_encode(ipv4_header_t *ipv4, raw_packet_t *raw_packet, packet_offset_
     /* calculate length */
     ipv4->len = len;
 
-    raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_VERSION]      = ipv4->ver_ihl;                                              /**< IP version */
+    raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_VERSION]    = ipv4->ver_ihl;                                         /**< IP version */
     raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_TOS]        = ipv4->tos;                                             /**< TOS (Type of Service) */
     raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_TTL]        = ipv4->ttl;                                             /**< TTL (Time to Live) */
     raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_PROTOCOL]   = ipv4->protocol;                                        /**< IPv4 protocol */
@@ -63,7 +70,7 @@ ipv4_header_encode(ipv4_header_t *ipv4, raw_packet_t *raw_packet, packet_offset_
     memcpy(&(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_DEST]),        &(ipv4->dest.addr), sizeof(ipv4_address_t)); /**< Destination Address */
     
     /* reset checksum (set to zero) */
-    memcpy(&(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_CHECKSUM]),    &CHECKSUM_ZERO,            sizeof(uint16_t));       /**< Header Checksum to Zero */
+    memcpy(&(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_CHECKSUM]),    &CHECKSUM_ZERO,     sizeof(uint16_t));       /**< Header Checksum to Zero */
 
     /* calculate checksum over ip-header */
     ipv4->checksum = raw_packet_calc_checksum((uint16_t *) &(raw_packet->data[ipv4_offset]), IPV4_HEADER_LEN);
@@ -85,50 +92,44 @@ ipv4_header_decode(raw_packet_t *raw_packet, packet_offset_t ipv4_offset)
     ipv4_header_t  *ipv4 = ipv4_header_new();
     
     /* pre-pre-fetch */
-    ipv4->ver_ihl             = raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_VERSION];                                 /**< IP version */
+    ipv4->ver_ihl = raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_VERSION];                                         /**< IP version */
     
     if (ipv4->version == IPV4_HEADER_VERSION) {
         
-        //packet->type |= PACKET_TYPE_IPV4;
-        
         if (raw_packet->len < (ipv4_offset + IPV4_HEADER_LEN)) {
             LOG_PRINTLN(LOG_HEADER_IPV4, LOG_ERROR, ("decode IPv4 packet: size too small (present=%u, required=%u)", raw_packet->len, (ipv4_offset + IPV4_HEADER_LEN)));
-            //packet->type |= PACKET_TYPE_IGNORE;
-            return NULL;
+            IPV4_FAILURE_EXIT;
         }
         
         /* pre-fetch */
-        ipv4->protocol   = raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_PROTOCOL];                                     /**< IPv4 protocol */
+        ipv4->protocol = raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_PROTOCOL];                                   /**< IPv4 protocol */
 
         /* decide */
         switch (ipv4->protocol) {
             case IPV4_PROTOCOL_UDP:     ipv4->udpv4 = udpv4_header_decode(raw_packet, ipv4_offset + IPV4_HEADER_LEN);   break;
-            default:                    /* packet->type |= PACKET_TYPE_IGNORE;   */                                       return NULL;
+            default:                    IPV4_FAILURE_EXIT;
         }
         
-        /*
-        if (packet->type & PACKET_TYPE_IGNORE) {
-            return;
+        if (ipv4->udpv4 == NULL) {
+            IPV4_FAILURE_EXIT;
         }
-        */
         
         /* fetch the rest */
-        ipv4->tos        = raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_TOS];                                          /**< TOS (Type of Service) */
-        ipv4->ttl        = raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_TTL];                                          /**< TTL (Time to Live) */
-        uint8_to_uint16(&(ipv4->len),            &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_LEN]));                /**< Total Length */
-        uint8_to_uint16(&(ipv4->id),             &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_ID]));                 /**< Identification */
-        uint8_to_uint16(&(ipv4->flags_offset),   &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_FLAGS]));              /**< Flags + Fragment Offset */
-        uint8_to_uint16(&(ipv4->checksum),       &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_CHECKSUM]));           /**< Header Checksum */
-        memcpy(&(ipv4->src.addr),  &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_SRC]),  IPV4_ADDRESS_LEN);           /**< Source Address */
-        memcpy(&(ipv4->dest.addr), &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_DEST]), IPV4_ADDRESS_LEN);           /**< Destination Address */
+        ipv4->tos        = raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_TOS];                                      /**< TOS (Type of Service) */
+        ipv4->ttl        = raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_TTL];                                      /**< TTL (Time to Live) */
+        uint8_to_uint16(&(ipv4->len),            &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_LEN]));            /**< Total Length */
+        uint8_to_uint16(&(ipv4->id),             &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_ID]));             /**< Identification */
+        uint8_to_uint16(&(ipv4->flags_offset),   &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_FLAGS]));          /**< Flags + Fragment Offset */
+        uint8_to_uint16(&(ipv4->checksum),       &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_CHECKSUM]));       /**< Header Checksum */
+        memcpy(&(ipv4->src.addr),  &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_SRC]),  IPV4_ADDRESS_LEN);       /**< Source Address */
+        memcpy(&(ipv4->dest.addr), &(raw_packet->data[ipv4_offset + IPV4_HEADER_OFFSET_DEST]), IPV4_ADDRESS_LEN);       /**< Destination Address */
         
         // TODO: Checksum (over ip-header) check
         return ipv4;
         
     } else {
         LOG_PRINTLN(LOG_HEADER_IPV4, LOG_ERROR, ("no IPv4 header ?! raw=%u version=%u", ipv4->ver_ihl, ipv4->version));
-        //packet->type |= PACKET_TYPE_IGNORE;
-        return NULL;
+        IPV4_FAILURE_EXIT;
     }
 }
 

@@ -11,10 +11,10 @@ log_level_t LOG_CATEGORY_LEVEL[] = {
     [LOG_DNS_DEFENDER]             = LOG_ERROR,
     [LOG_SOCKET_BPF]               = LOG_ERROR,
     [LOG_FIREWALL_PF]              = LOG_ERROR,
-    [LOG_HEADER_ETHERNET]          = LOG_ERROR,
-    [LOG_HEADER_IPV4]              = LOG_ERROR,
-    [LOG_HEADER_UDPV4]             = LOG_ERROR,
-    [LOG_HEADER_DNS]               = LOG_ERROR
+    [LOG_HEADER_ETHERNET]          = LOG_DEBUG,
+    [LOG_HEADER_IPV4]              = LOG_DEBUG,
+    [LOG_HEADER_UDPV4]             = LOG_DEBUG,
+    [LOG_HEADER_DNS]               = LOG_DEBUG
 };
 
 const char *LOG_CATEGORY_STRING[] = {

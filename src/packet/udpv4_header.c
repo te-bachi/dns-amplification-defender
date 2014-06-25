@@ -5,19 +5,26 @@
 
 #include <string.h>
 
+#define UDPV4_FAILURE_EXIT  udpv4_header_free(udpv4); \
+                            return NULL
+                            
 static udpv4_header_t udpv4_header;
 
 udpv4_header_t *
 udpv4_header_new(void)
 {
+    LOG_PRINTLN(LOG_HEADER_UDPV4, LOG_DEBUG, ("UDPv4 header new"));
+    
     memset(&udpv4_header, 0, sizeof(udpv4_header_t));
     return &udpv4_header;
 }
 
 void
-udpv4_header_free(udpv4_header_t *udpv4_header)
+udpv4_header_free(udpv4_header_t *udpv4)
 {
-    /* no nothing */
+    LOG_PRINTLN(LOG_HEADER_UDPV4, LOG_DEBUG, ("UDPv4 header free"));
+    
+    if (udpv4->dns != NULL)     dns_header_free(udpv4->dns);
 }
 
 packet_len_t
@@ -100,12 +107,9 @@ udpv4_header_decode(raw_packet_t *raw_packet, packet_offset_t udpv4_offset)
 {
     udpv4_header_t *udpv4 = udpv4_header_new();
     
-    //packet->type |= PACKET_TYPE_UDPV4;
-    
     if (raw_packet->len < (udpv4_offset + UDPV4_HEADER_LEN)) {
         LOG_PRINTLN(LOG_HEADER_UDPV4, LOG_ERROR, ("decode UDP packet: size too small (present=%u, required=%u)", raw_packet->len, (udpv4_offset + UDPV4_HEADER_LEN)));
-        //packet->type |= PACKET_TYPE_IGNORE;
-        return NULL;
+        UDPV4_FAILURE_EXIT;
     }
     
     /* pre-fetch */
@@ -113,15 +117,13 @@ udpv4_header_decode(raw_packet_t *raw_packet, packet_offset_t udpv4_offset)
     
     /* decide */
     switch (udpv4->dest_port) {
-        case PORT_DNS:      udpv4->dns = dns_header_decode(raw_packet, udpv4_offset + UDPV4_HEADER_LEN);     break;
-        default:            /* packet->type |= PACKET_TYPE_IGNORE;    */                                     return NULL;
+        case PORT_DNS:      udpv4->dns = dns_header_decode(raw_packet, udpv4_offset + UDPV4_HEADER_LEN);    break;
+        default:                                                                                            UDPV4_FAILURE_EXIT;
     }
     
-    /*
-    if (packet->type & PACKET_TYPE_IGNORE) {
-        return;
+    if (udpv4->dns == NULL) {
+        UDPV4_FAILURE_EXIT;
     }
-    */
     
     /* fetch the rest */
     uint8_to_uint16(&(udpv4->src_port),  &(raw_packet->data[udpv4_offset + UDPV4_HEADER_OFFSET_SRC_PORT]));
