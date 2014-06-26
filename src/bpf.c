@@ -70,7 +70,7 @@ bpf_open(const char *iface, const unsigned int timeout, const unsigned int *buff
         snprintf(bpf_dev, sizeof(bpf_dev), "%s%d", prefix, i);
         bpf = open(bpf_dev, O_RDWR);
         if (bpf == -1 && errno != EBUSY) {
-            fprintf(stderr, "ERROR: Could not open BPF device: %s\n", strerror(errno)); 
+            LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not open BPF device")); 
             return -1;
         }
     }
@@ -79,25 +79,25 @@ bpf_open(const char *iface, const unsigned int timeout, const unsigned int *buff
     /* bind to interface */
     strlcpy(iface_bind.ifr_name, iface, IFNAMSIZ);
     if (ioctl(bpf, BIOCSETIF, &iface_bind) == -1) {
-        fprintf(stderr, "ERROR: Could not bind interface %s to BPF device: %s\n", iface, strerror(errno));
+        LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not bind interface %s to BPF device", iface));
         return -1;
     }
     
     /* Enable immediate mode */
     if (ioctl(bpf, BIOCIMMEDIATE, &enable) == -1) {
-        fprintf(stderr, "ERROR: Could not enable immediate mode: %s\n", strerror(errno));
+        LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not enable immediate mode"));
         return -1;
     }
     
     /* Enable write link level source address as provided*/
     if (ioctl(bpf, BIOCGHDRCMPLT, &enable) == -1) {
-        fprintf(stderr, "ERROR: Could not enable write link level source address as provided: %s\n", strerror(errno));
+        LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not enable write link level source address as provided"));
         return -1;
     }
     
     /* Get buffer length */
     if (ioctl(bpf, BIOCGBLEN, buffer_len) == -1) {
-        fprintf(stderr, "ERROR: Could not get buffer length: %s\n", strerror(errno));
+        LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not get buffer length"));
         return -1;
     }
     
@@ -106,13 +106,13 @@ bpf_open(const char *iface, const unsigned int timeout, const unsigned int *buff
     tv_timeout.tv_usec  = 0;
     
     if (ioctl(bpf, BIOCSRTIMEOUT, &tv_timeout) == -1) {
-        fprintf(stderr, "ERROR: Could not set timeout: %s\n", strerror(errno));
+        LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not set timeout"));
         return -1;
     }
     
     /* Set filter */
     if (ioctl(bpf, BIOCSETF, (struct bpf_program *) &bpf_program) == -1) {
-        fprintf(stderr, "ERROR: Could not set timeout: %s\n", strerror(errno));
+        LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not set timeout"));
         return -1;
     }
     

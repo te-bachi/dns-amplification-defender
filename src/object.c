@@ -1,4 +1,5 @@
 #include "object.h"
+#include "log.h"
 
 #include <string.h>
 
@@ -17,6 +18,8 @@ object_new(class_info_t *class_info)
     
     // allocate memory WITHOUT setting memory region to zero
     object_t *this = class_info->mem_alloc(class_info->size);
+    
+    LOG_PRINTLN(LOG_OBJECT, LOG_DEBUG, ("Create new object \"%s\"", class_info->name));
     
     // init instance and set memory region to zero
     object_init(this, class_info);
@@ -76,6 +79,8 @@ object_retain(void *ptr)
         return ptr;
     }
     
+    LOG_PRINTLN(LOG_OBJECT, LOG_DEBUG, ("Retain object \"%s\"", this->class_info->name));
+    
     this->ref_count++;
     
     return ptr;
@@ -94,8 +99,11 @@ object_release(void *ptr)
         return;
     }
     
+    LOG_PRINTLN(LOG_OBJECT, LOG_DEBUG, ("Release object \"%s\"", this->class_info->name));
+    
     this->ref_count--;
     if (this->ref_count == 0) {
+        LOG_PRINTLN(LOG_OBJECT, LOG_DEBUG, ("Free object \"%s\"", this->class_info->name));
         if (this->class_info->destructor) {
             this->class_info->destructor(ptr);
         }

@@ -1,14 +1,24 @@
 
 #include "dns_defender.h"
 #include "log.h"
+#include "bpf.h"
 
 #include "packet/packet.h"
 
+typedef struct _dns_defender_t {
+    unsigned int        buffer_len;
+} dns_defender_t;
+
+static dns_defender_t dns_defender;
+
 bool
-dns_defender_init(void)
+dns_defender_init(config_t *config)
 {
     log_init();
     
+    if (!bpf_open(config->ifname, config->timeout, &(dns_defender.buffer_len))) {
+        return false;
+    }
     
     return true;
 }
@@ -31,6 +41,7 @@ dns_defender_mainloop(void)
     };
     
     packet = packet_decode(&raw_packet);
+    object_release(packet);
     
     return 0;
 }

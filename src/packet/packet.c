@@ -6,10 +6,11 @@
 static void packet_destructor(void *ptr);
 
 static class_info_t class_info = {
-    .size        = sizeof(packet_t),
-    .destructor  = packet_destructor,
-    .mem_alloc   = malloc,
-    .mem_free    = free
+    .name       = "packet",
+    .size       = sizeof(packet_t),
+    .destructor = packet_destructor,
+    .mem_alloc  = malloc,
+    .mem_free   = free
 };
 
 packet_t *

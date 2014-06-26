@@ -21,6 +21,7 @@ typedef void (*mem_free_fn)(void *ptr);
 
 // class info
 struct class_info_t {
+    const char             *name;           // class name
     size_t                  size;           // size of object
     destructor_fn           destructor;     // destructor
     mem_alloc_fn            mem_alloc;      // memory allocation function

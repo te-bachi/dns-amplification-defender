@@ -2,37 +2,40 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include <inttypes.h>
 
 bool log_enabled = true;
 
 log_level_t LOG_CATEGORY_LEVEL[] = {
-    [LOG_DNS_DEFENDER]             = LOG_ERROR,
-    [LOG_SOCKET_BPF]               = LOG_ERROR,
-    [LOG_FIREWALL_PF]              = LOG_ERROR,
-    [LOG_HEADER_ETHERNET]          = LOG_DEBUG,
-    [LOG_HEADER_IPV4]              = LOG_DEBUG,
-    [LOG_HEADER_UDPV4]             = LOG_DEBUG,
-    [LOG_HEADER_DNS]               = LOG_DEBUG
+    [LOG_OBJECT]                = LOG_DEBUG,
+    [LOG_DNS_DEFENDER]          = LOG_ERROR,
+    [LOG_SOCKET_BPF]            = LOG_ERROR,
+    [LOG_FIREWALL_PF]           = LOG_ERROR,
+    [LOG_HEADER_ETHERNET]       = LOG_DEBUG,
+    [LOG_HEADER_IPV4]           = LOG_DEBUG,
+    [LOG_HEADER_UDPV4]          = LOG_DEBUG,
+    [LOG_HEADER_DNS]            = LOG_DEBUG
 };
 
 const char *LOG_CATEGORY_STRING[] = {
-    [LOG_DNS_DEFENDER]             = "[DNS DEFENDER     ]",
-    [LOG_SOCKET_BPF]               = "[SOCKET BPF       ]",
-    [LOG_FIREWALL_PF]              = "[FIREWALL PF      ]",
-    [LOG_HEADER_ETHERNET]          = "[HEADER ETHERNET  ]",
-    [LOG_HEADER_IPV4]              = "[HEADER IPV4      ]",
-    [LOG_HEADER_UDPV4]             = "[HEADER UDPV4     ]",
-    [LOG_HEADER_DNS]               = "[HEADER DNS       ]"
+    [LOG_OBJECT]                = "[OBJECT           ]",
+    [LOG_DNS_DEFENDER]          = "[DNS DEFENDER     ]",
+    [LOG_SOCKET_BPF]            = "[SOCKET BPF       ]",
+    [LOG_FIREWALL_PF]           = "[FIREWALL PF      ]",
+    [LOG_HEADER_ETHERNET]       = "[HEADER ETHERNET  ]",
+    [LOG_HEADER_IPV4]           = "[HEADER IPV4      ]",
+    [LOG_HEADER_UDPV4]          = "[HEADER UDPV4     ]",
+    [LOG_HEADER_DNS]            = "[HEADER DNS       ]"
 };
 
 const char *LOG_LEVEL_STRING[] = {
-    [LOG_ERROR]                    = "[ERROR  ] ",
-    [LOG_WARNING]                  = "[WARN   ] ",
-    [LOG_INFO]                     = "[INFO   ] ",
-    [LOG_DEBUG]                    = "[DEBUG  ] ",
-    [LOG_VERBOSE]                  = "[VERBOSE] "
+    [LOG_ERROR]                 = "[ERROR  ] ",
+    [LOG_WARNING]               = "[WARN   ] ",
+    [LOG_INFO]                  = "[INFO   ] ",
+    [LOG_DEBUG]                 = "[DEBUG  ] ",
+    [LOG_VERBOSE]               = "[VERBOSE] "
 };
 
 void
@@ -113,5 +116,15 @@ log_appendln(const char *format, ...)
     va_end(args);
 }
 
-/*** TO STRING ***************************************************************/
+void
+log_errno(int errnum)
+{
+    char error_str[STRERROR_R_BUFFER_MAX];
+    
+    if (!strerror_r(errnum, error_str, sizeof(error_str))) {
+        LOG_PRINTF(LOG_STREAM, ": %s\n", error_str);
+    } else {
+        LOG_PRINTF(LOG_STREAM, ": <lookup error number failed>\n");
+    }
+}
 

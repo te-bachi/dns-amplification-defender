@@ -27,6 +27,7 @@
         } \
     } while(0)
 
+/*
 #define LOG_CHAR_STREAM(category, level, stream, len, msg) \
     do { \
         if (log_enabled && level <= LOG_CATEGORY_LEVEL[category]) { \
@@ -35,20 +36,31 @@
             log_char_stream(stream, len); \
         } \
     } while(0)
+*/
 
-#define LOG_ENABLE(category, level)         (log_enabled && level <= LOG_CATEGORY_LEVEL[category])
+#define LOG_ERRNO(category, level, errnum, msg) \
+    do { \
+        if (log_enabled && level <= LOG_CATEGORY_LEVEL[category]) { \
+            log_print_header(category, level); \
+            log_print msg; \
+            log_errno(errnum); \
+        } \
+    } while(0)
 
-#define LOG_HEADER_CATEGORY(category)       LOG_PRINTF(LOG_STREAM, "%s", LOG_CATEGORY_STRING[category]);
-#define LOG_HEADER_LEVEL(level)             LOG_PRINTF(LOG_STREAM, "%s", LOG_LEVEL_STRING[level]);
+#define LOG_ENABLE(category, level)             (log_enabled && level <= LOG_CATEGORY_LEVEL[category])
 
-#define LOG_PRINT(category, level, msg)     LOG_FUNCTION(true,  log_print,    category, level, msg)
-#define LOG_PRINTLN(category, level, msg)   LOG_FUNCTION(true,  log_println,  category, level, msg)
-#define LOG_APPEND(category, level, msg)    LOG_FUNCTION(false, log_append,   category, level, msg)
-#define LOG_APPENDLN(category, level, msg)  LOG_FUNCTION(false, log_appendln, category, level, msg)
+#define LOG_HEADER_CATEGORY(category)           LOG_PRINTF(LOG_STREAM, "%s", LOG_CATEGORY_STRING[category]);
+#define LOG_HEADER_LEVEL(level)                 LOG_PRINTF(LOG_STREAM, "%s", LOG_LEVEL_STRING[level]);
+
+#define LOG_PRINT(category, level, msg)         LOG_FUNCTION(true,  log_print,         category, level, msg)
+#define LOG_PRINTLN(category, level, msg)       LOG_FUNCTION(true,  log_println,       category, level, msg)
+#define LOG_APPEND(category, level, msg)        LOG_FUNCTION(false, log_append,        category, level, msg)
+#define LOG_APPENDLN(category, level, msg)      LOG_FUNCTION(false, log_appendln,      category, level, msg)
 
 /*** DECLARATION ************************************************************/
 
 typedef enum {
+    LOG_OBJECT,
     LOG_DNS_DEFENDER,
     LOG_SOCKET_BPF,
     LOG_FIREWALL_PF,
@@ -81,10 +93,10 @@ static inline void log_disable() { log_enabled = false; }
 void        log_print_header           (log_category_t category, log_level_t level);
 void        log_print                  (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
 void        log_println                (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
-void        log_println_errno          (int strerr, const char *format, ...)    __attribute__ ((format (printf, 2, 3)));
+void        log_errno                  (int errnum);
 void        log_append                 (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
 void        log_appendln               (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
-void        log_char_stream            (const char *stream, const uint32_t len);
+/* void        log_char_stream            (const char *stream, const uint32_t len); */
 
 #endif
 
