@@ -7,7 +7,7 @@ main(int argc, char *argv[])
 {
     config_t config = {
         .ifname     = "vr1",
-        .timeout    = 500
+        .timeout    = 1
     };
     
     if (dns_defender_init(&config)) {

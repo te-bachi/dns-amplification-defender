@@ -12,6 +12,9 @@
 #include <net/bpf.h>
 #include <net/if.h>
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "log.h"
 
 #include "packet/packet.h"
@@ -96,24 +99,28 @@ bpf_open(const char *iface, const unsigned int timeout, const unsigned int *buff
         LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not bind interface %s to BPF device", iface));
         return -1;
     }
+    LOG_PRINTLN(LOG_SOCKET_BPF, LOG_DEBUG, ("Bind BPF device to interface %s", iface));
     
     /* Enable immediate mode */
     if (ioctl(bpf, BIOCIMMEDIATE, &enable) == -1) {
         LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not enable immediate mode"));
         return -1;
     }
+    LOG_PRINTLN(LOG_SOCKET_BPF, LOG_DEBUG, ("Enable immediate mode"));
     
     /* Enable write link level source address as provided*/
     if (ioctl(bpf, BIOCGHDRCMPLT, &enable) == -1) {
         LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not enable write link level source address as provided"));
         return -1;
     }
+    LOG_PRINTLN(LOG_SOCKET_BPF, LOG_DEBUG, ("Enable write link level source address as provided"));
     
     /* Get buffer length */
     if (ioctl(bpf, BIOCGBLEN, buffer_len) == -1) {
         LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not get buffer length"));
         return -1;
     }
+    LOG_PRINTLN(LOG_SOCKET_BPF, LOG_DEBUG, ("Get buffer length: len=%u", *buffer_len));
     
     /* Set timeout */
     tv_timeout.tv_sec   = timeout;
@@ -123,12 +130,38 @@ bpf_open(const char *iface, const unsigned int timeout, const unsigned int *buff
         LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not set timeout"));
         return -1;
     }
+    LOG_PRINTLN(LOG_SOCKET_BPF, LOG_DEBUG, ("Set timeout to %us", timeout));
     
     /* Set filter */
     if (ioctl(bpf, BIOCSETF, (struct bpf_program *) &bpf_program) == -1) {
-        LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not set timeout"));
+        LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not set filter"));
         return -1;
     }
+    LOG_PRINTLN(LOG_SOCKET_BPF, LOG_DEBUG, ("Set filter"));
     
     return bpf;
+}
+
+bool
+bpf_read(int bpf, raw_packet_t *raw_packet, const unsigned int buffer_len)
+{
+    uint8_t         buffer[buffer_len];
+    ssize_t         bytes_read;
+    struct bpf_hdr *bpf_header;
+    
+    bytes_read = read(bpf, buffer, buffer_len);
+    if (bytes_read == -1) {
+        LOG_ERRNO(LOG_SOCKET_BPF, LOG_WARNING, errno, ("Could not read")); 
+    } else if (bytes_read > 0) {
+        bpf_header = (struct bpf_hdr *) buffer;
+        
+        raw_packet->len = bytes_read - bpf_header->bh_hdrlen;
+        memcpy(raw_packet->data, &(buffer[bpf_header->bh_hdrlen]), raw_packet->len);
+        
+        LOG_PRINTLN(LOG_SOCKET_BPF, LOG_INFO, ("received a packet, len=%d", raw_packet->len));
+        
+        return true;
+    }
+    
+    return false;
 }

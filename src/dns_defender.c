@@ -1,15 +1,18 @@
 
 #include "dns_defender.h"
 #include "log.h"
+#include "log_network.h"
 #include "bpf.h"
 
 #include "packet/packet.h"
 
 #include <signal.h>
+#include <errno.h>
 
 typedef struct _dns_defender_t {
     bool                running;
-    unsigned int        buffer_len;
+    int                 bpf;
+    unsigned int        bpf_buf_len;
 } dns_defender_t;
 
 static dns_defender_t dns_defender;
@@ -19,8 +22,6 @@ static void dns_defender_int_signal(int signo);
 bool
 dns_defender_init(config_t *config)
 {
-    int bpf;
-    
     /* add signal handler */
     if (signal(SIGINT, dns_defender_int_signal) == SIG_ERR) {
         return false;
@@ -30,8 +31,8 @@ dns_defender_init(config_t *config)
     log_init();
     
     /* open BPF device */
-    bpf = bpf_open(config->ifname, config->timeout, &(dns_defender.buffer_len));
-    if (bpf == -1) {
+    dns_defender.bpf = bpf_open(config->ifname, config->timeout, &(dns_defender.bpf_buf_len));
+    if (dns_defender.bpf == -1) {
         return false;
     }
     
@@ -40,11 +41,8 @@ dns_defender_init(config_t *config)
     return true;
 }
 
-int
-dns_defender_mainloop(void)
-{
-    packet_t      *packet;
-    raw_packet_t   raw_packet = {
+/*
+    raw_packet_t    raw_packet = {
         .len  = 70,
         .data = { 0x00, 0x15, 0x17, 0x0e, 0x61, 0xa2, 0x00, 0x03,
                   0x6c, 0xb3, 0x54, 0x1b, 0x08, 0x00, 0x45, 0x00,
@@ -59,9 +57,20 @@ dns_defender_mainloop(void)
     
     packet = packet_decode(&raw_packet);
     object_release(packet);
+*/
+
+int
+dns_defender_mainloop(void)
+{
+    packet_t       *packet;
+    raw_packet_t    raw_packet;
     
     while (dns_defender.running) {
-        
+        if (bpf_read(dns_defender.bpf, &raw_packet, dns_defender.bpf_buf_len)) {
+            LOG_RAW_PACKET(LOG_DNS_DEFENDER, LOG_INFO, &raw_packet, ("RX"));
+            packet = packet_decode(&raw_packet);
+            object_release(packet);
+        }
     }
     
     return 0;

@@ -96,6 +96,8 @@ ethernet_header_decode(raw_packet_t *raw_packet, packet_offset_t ethernet_offset
     /* pre-fetch */
     uint8_to_uint16(&(ether->type), &(raw_packet->data[ethernet_offset + ETHERNET_HEADER_OFFSET_TYPE]));                           /**< Ethernet Type / VLAN TPID */
     
+    LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_INFO, ("ethertype=0x%04x", ether->type));
+    
     /* VLAN tag? */
     if (ether->type == ETHERTYPE_VLAN) {
         

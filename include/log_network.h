@@ -23,7 +23,7 @@
 
 #define LOG_NETWORK_FUNCTION(function, category, level, packet, msg) \
     do { \
-        if (log && level <= LOG_CATEGORY_LEVEL[category]) { \
+        if (log_enabled && level <= LOG_CATEGORY_LEVEL[category]) { \
             log_print_header(category, level); \
             log_println msg; \
             function(packet); \

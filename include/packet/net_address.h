@@ -14,7 +14,7 @@
 #define IPV6_ADDRESS_DW_LEN     2
 
 /* see ETH_FRAME_LEN in '/usr/include/linux/if_ether.h' */
-#define ETH_MAX_FRAME_SIZE      1600                    /**< Max. bytes in frame without preamble, SFD but with FCS (=CRC) */
+#define ETH_MAX_FRAME_SIZE      4096                    /**< Max. bytes in frame without preamble, SFD but with FCS (=CRC) */
 
 /** MAC address structure */
 typedef struct _mac_address_t {
