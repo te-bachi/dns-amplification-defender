@@ -10,9 +10,9 @@ bool log_enabled = true;
 
 log_level_t LOG_CATEGORY_LEVEL[] = {
     [LOG_OBJECT]                = LOG_DEBUG,
-    [LOG_DNS_DEFENDER]          = LOG_ERROR,
-    [LOG_SOCKET_BPF]            = LOG_ERROR,
-    [LOG_FIREWALL_PF]           = LOG_ERROR,
+    [LOG_DNS_DEFENDER]          = LOG_DEBUG,
+    [LOG_SOCKET_BPF]            = LOG_DEBUG,
+    [LOG_FIREWALL_PF]           = LOG_DEBUG,
     [LOG_HEADER_ETHERNET]       = LOG_DEBUG,
     [LOG_HEADER_IPV4]           = LOG_DEBUG,
     [LOG_HEADER_UDPV4]          = LOG_DEBUG,

@@ -68,13 +68,27 @@ bpf_open(const char *iface, const unsigned int timeout, const unsigned int *buff
     /* try to open a bpf device after another */
     for (i = 0; i < BPF_DEVICE_MAX; i++) {
         snprintf(bpf_dev, sizeof(bpf_dev), "%s%d", prefix, i);
+        
+        LOG_PRINTLN(LOG_SOCKET_BPF, LOG_VERBOSE, ("Trying BPF device %s", bpf_dev));
+        
         bpf = open(bpf_dev, O_RDWR);
-        if (bpf == -1 && errno != EBUSY) {
-            LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not open BPF device")); 
-            return -1;
+        if (bpf == -1) {
+            LOG_ERRNO(LOG_SOCKET_BPF, LOG_ERROR, errno, ("Could not open BPF device %s", bpf_dev)); 
+            continue;
+        }
+        
+        if (bpf >= 0) {
+            break;
         }
     }
+    
+    if (bpf == -1) {
+        LOG_PRINTLN(LOG_SOCKET_BPF, LOG_ERROR, ("No device found. Abort!"));
+        return -1;
+    }
+    
     /* bpf successfully opened */
+    LOG_PRINTLN(LOG_SOCKET_BPF, LOG_DEBUG, ("BPF device %s successfully opened: bpf=%d", bpf_dev, bpf));
     
     /* bind to interface */
     strlcpy(iface_bind.ifr_name, iface, IFNAMSIZ);

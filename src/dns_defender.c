@@ -5,20 +5,37 @@
 
 #include "packet/packet.h"
 
+#include <signal.h>
+
 typedef struct _dns_defender_t {
+    bool                running;
     unsigned int        buffer_len;
 } dns_defender_t;
 
 static dns_defender_t dns_defender;
 
+static void dns_defender_int_signal(int signo);
+
 bool
 dns_defender_init(config_t *config)
 {
-    log_init();
+    int bpf;
     
-    if (!bpf_open(config->ifname, config->timeout, &(dns_defender.buffer_len))) {
+    /* add signal handler */
+    if (signal(SIGINT, dns_defender_int_signal) == SIG_ERR) {
         return false;
     }
+    
+    /* init log */
+    log_init();
+    
+    /* open BPF device */
+    bpf = bpf_open(config->ifname, config->timeout, &(dns_defender.buffer_len));
+    if (bpf == -1) {
+        return false;
+    }
+    
+    dns_defender.running = true;
     
     return true;
 }
@@ -43,5 +60,16 @@ dns_defender_mainloop(void)
     packet = packet_decode(&raw_packet);
     object_release(packet);
     
+    while (dns_defender.running) {
+        
+    }
+    
     return 0;
+}
+
+static void
+dns_defender_int_signal(int signo)
+{
+    LOG_PRINTLN(LOG_DNS_DEFENDER, LOG_INFO, ("\nCaught INT signal. Exit!"));
+    dns_defender.running = false;
 }
