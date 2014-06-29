@@ -89,7 +89,7 @@ ethernet_header_decode(raw_packet_t *raw_packet, packet_offset_t ethernet_offset
     packet_len_t        ethernet_len;   /**< length of this packet */
     
     if (raw_packet->len < (ethernet_offset + ETHERNET_HEADER_LEN)) {
-        LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_ERROR, ("decode Ethernet packet: size too small (present=%u, required=%u)", raw_packet->len, ethernet_offset + ETHERNET_HEADER_LEN));
+        LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_ERROR, ("decode Ethernet header: size too small (present=%u, required=%u)", raw_packet->len - ethernet_offset, ETHERNET_HEADER_LEN));
         ETHERNET_FAILURE_EXIT;
     }
     

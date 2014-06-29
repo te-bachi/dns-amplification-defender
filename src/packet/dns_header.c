@@ -39,6 +39,21 @@ dns_header_encode(dns_header_t *dns_header, raw_packet_t *raw_packet, packet_off
 dns_header_t *
 dns_header_decode(raw_packet_t *raw_packet, packet_offset_t dns_offset)
 {
-    return dns_header_new();
+    dns_header_t *dns = dns_header_new();
+    
+    if (raw_packet->len < (dns_offset + DNS_HEADER_LEN)) {
+        LOG_PRINTLN(LOG_HEADER_DNS, LOG_ERROR, ("decode DNS header: size too small (present=%u, required=%u)", raw_packet->len - dns_offset, UDPV4_HEADER_LEN));
+        DNS_FAILURE_EXIT;
+    }
+    
+    /* fetch header */
+    uint8_to_uint16(&(dns->id),         &(raw_packet->data[dns_offset + DNS_HEADER_OFFSET_ID]));
+    uint8_to_uint16(&(dns->flags.raw),  &(raw_packet->data[dns_offset + DNS_HEADER_OFFSET_FLAGS]));
+    uint8_to_uint16(&(dns->qd_count),   &(raw_packet->data[dns_offset + DNS_HEADER_OFFSET_QD_COUNT]));
+    uint8_to_uint16(&(dns->an_count),   &(raw_packet->data[dns_offset + DNS_HEADER_OFFSET_AN_COUNT]));
+    uint8_to_uint16(&(dns->ns_count),   &(raw_packet->data[dns_offset + DNS_HEADER_OFFSET_NS_COUNT]));
+    uint8_to_uint16(&(dns->ar_count),   &(raw_packet->data[dns_offset + DNS_HEADER_OFFSET_AR_COUNT]));
+    
+    return dns;
 }
 

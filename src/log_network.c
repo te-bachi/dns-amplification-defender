@@ -108,9 +108,11 @@ log_ipv4_header(const ipv4_header_t *ipv4_header)
     LOG_PRINTF(LOG_STREAM, "   |-Differentiated Service             0x%02" PRIx8 "\n",                            ipv4_header->dscp);
     LOG_PRINTF(LOG_STREAM, "   |-IP Total Length                    %"     PRIu16 " bytes\n",                     ipv4_header->len);
     LOG_PRINTF(LOG_STREAM, "   |-Identification                     0x%04" PRIx16 "          (%" PRIu16 ")\n",    ipv4_header->id, ipv4_header->id);
-    LOG_PRINTF(LOG_STREAM, "   |-Dont Fragment Field                %-15s (0x%02" PRIx8 ")\n",                    ipv4_header->dont_fragment ? "set" : "no set", ipv4_header->dont_fragment);
-    LOG_PRINTF(LOG_STREAM, "   |-More Fragment Field                %-15s (0x%02" PRIx8 ")\n",                    ipv4_header->more_fragments ? "set" : "no set", ipv4_header->more_fragments);
-    LOG_PRINTF(LOG_STREAM, "   |-Fragment Offset                    0x%04" PRIx16 "          (%u)\n",             ipv4_header->fragment_offset, ipv4_header->fragment_offset);
+    LOG_PRINTF(LOG_STREAM, "   |-Flags                              0x%04" PRIx16 "          (%" PRIu16 ")\n",    ipv4_header->flags_offset & IPV4_HEADER_MASK_FLAGS,
+                                                                                                                  ipv4_header->flags_offset & IPV4_HEADER_MASK_FLAGS);
+    LOG_PRINTF(LOG_STREAM, "      |-Don't Fragment Field            %-15s\n",                                     ipv4_header->dont_fragment ? "set" : "no set");
+    LOG_PRINTF(LOG_STREAM, "      |-More Fragment Field             %-15s\n",                                     ipv4_header->more_fragments ? "set" : "no set");
+    LOG_PRINTF(LOG_STREAM, "   |-Fragment Offset                    0x%04" PRIx16 "          (%" PRIu16 ")\n",    ipv4_header->fragment_offset, ipv4_header->fragment_offset);
     LOG_PRINTF(LOG_STREAM, "   |-TTL                                %"     PRIu8 "\n",                            ipv4_header->ttl);
     LOG_PRINTF(LOG_STREAM, "   |-Protocol                           %-15s (%"     PRIu8 ")\n",                    log_ipv4_protocol(ipv4_header->protocol), ipv4_header->protocol);
     LOG_PRINTF(LOG_STREAM, "   |-Checksum                           0x%04" PRIx16 "          (%" PRIu16 ")\n",    ipv4_header->checksum, ipv4_header->checksum);
@@ -126,7 +128,29 @@ log_udpv4_header(const udpv4_header_t *udpv4_header)
     LOG_PRINTF(LOG_STREAM, "   |-Source Port                        %-15s (%" PRIu16 ")\n",               log_ip_port(udpv4_header->src_port), udpv4_header->src_port);
     LOG_PRINTF(LOG_STREAM, "   |-Destination Port                   %-15s (%" PRIu16 ")\n",               log_ip_port(udpv4_header->dest_port), udpv4_header->dest_port);
     LOG_PRINTF(LOG_STREAM, "   |-UDP Length                         %"        PRIu16 " Bytes\n",          udpv4_header->len);
-    LOG_PRINTF(LOG_STREAM, "   |-UDP Checksum                       0x%04"    PRIx16 "          (%u)\n",  udpv4_header->checksum, udpv4_header->checksum);
+    LOG_PRINTF(LOG_STREAM, "   |-UDP Checksum                       0x%04"    PRIx16 "          (%" PRIu16 ")\n",  udpv4_header->checksum, udpv4_header->checksum);
+}
+
+void
+log_dns_header(const dns_header_t *dns_header)
+{
+    LOG_PRINTF(LOG_STREAM, "DNS Header\n");
+    
+    LOG_PRINTF(LOG_STREAM, "   |-Identifier                         0x%04" PRIx16   "          (%" PRIu16 ")\n",     dns_header->id,           dns_header->id);
+    LOG_PRINTF(LOG_STREAM, "   |-Flags                              0x%04" PRIx16   "          (%" PRIu16 ")\n",     dns_header->flags.raw,    dns_header->flags.raw);
+    LOG_PRINTF(LOG_STREAM, "      |-Query / Response     (qr)       %s\n",                                           dns_header->flags.qr ? "Response" : "Query");
+    LOG_PRINTF(LOG_STREAM, "      |-Operation Code       (opcode)   %-15s (0x%04" PRIx16 ")\n",       log_dns_opcode(dns_header->flags.opcode), dns_header->flags.opcode);
+    LOG_PRINTF(LOG_STREAM, "      |-Authoritative Answer (aa)       %s\n",                                           dns_header->flags.aa ? "set" : "not set");
+    LOG_PRINTF(LOG_STREAM, "      |-Truncation           (tc)       %s\n",                                           dns_header->flags.tc ? "set" : "not set");
+    LOG_PRINTF(LOG_STREAM, "      |-Recursion Desired    (rd)       %s\n",                                           dns_header->flags.rd ? "set" : "not set");
+    LOG_PRINTF(LOG_STREAM, "      |-Recursion Available  (ra)       %s\n",                                           dns_header->flags.ra ? "set" : "not set");
+    LOG_PRINTF(LOG_STREAM, "      |-Authentic Data       (ad)       %s\n",                                           dns_header->flags.ad ? "set" : "not set");
+    LOG_PRINTF(LOG_STREAM, "      |-Checking Disabled    (cd)       %s\n",                                           dns_header->flags.cd ? "set" : "not set");
+    LOG_PRINTF(LOG_STREAM, "      |-Response Code        (rcode)    %s (%" PRIu16 ")\n",               log_dns_rcode(dns_header->flags.rcode), dns_header->flags.rcode);
+    LOG_PRINTF(LOG_STREAM, "   |-Questions                          %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->qd_count,  dns_header->qd_count);
+    LOG_PRINTF(LOG_STREAM, "   |-Answer RRs                         %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->an_count,  dns_header->an_count);
+    LOG_PRINTF(LOG_STREAM, "   |-Authority RRs                      %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->ns_count,  dns_header->ns_count);
+    LOG_PRINTF(LOG_STREAM, "   |-Additional RRs                     %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->ar_count,  dns_header->ar_count);
 }
 
 /*** TO STRING ***************************************************************/
@@ -207,7 +231,7 @@ num2hexstr(uint32_t num, uint8_t *chr, size_t len)
     }
 }
 
-const char*
+const char *
 log_ether_type(const uint16_t ether_type)
 {
     switch (ether_type) {
@@ -230,7 +254,7 @@ log_ipv4_protocol(const uint8_t ipv4_protocol)
     }
 }
 
-const char*
+const char *
 log_ip_port(const uint16_t port)
 {
     switch (port) {
@@ -238,3 +262,36 @@ log_ip_port(const uint16_t port)
         default:                    return "unknow";
     }
 }
+
+const char *
+log_dns_opcode(const uint16_t opcode)
+{
+    switch (opcode) {
+        case DNS_HEADER_OPCODE_QUERY:    return "Query";
+        case DNS_HEADER_OPCODE_IQUERY:   return "IQuery";
+        case DNS_HEADER_OPCODE_STATUS:   return "Status";
+        case DNS_HEADER_OPCODE_NOTIFY:   return "Notify";
+        case DNS_HEADER_OPCODE_UPDATE:   return "Update";
+        default:                         return "Unknow";
+    }
+}
+
+const char *
+log_dns_rcode(const uint16_t rcode)
+{
+    switch (rcode) {
+        case DNS_HEADER_RCODE_NO_ERROR:  return "No Error";
+        case DNS_HEADER_RCODE_FORM_ERR:  return "Format Error";
+        case DNS_HEADER_RCODE_SERV_FAIL: return "Server Failure";
+        case DNS_HEADER_RCODE_NX_DOMAIN: return "Non-Existent Domain";
+        case DNS_HEADER_RCODE_NOT_IMPL:  return "Not Implemented";
+        case DNS_HEADER_RCODE_REFUSED:   return "Query Refused";
+        case DNS_HEADER_RCODE_YX_DOMAIN: return "Name Exists when it should not";
+        case DNS_HEADER_RCODE_YX_RR_SET: return "RR Set Exists when it should not";
+        case DNS_HEADER_RCODE_NX_RR_SET: return "RR Set that should exist does not";
+        case DNS_HEADER_RCODE_NOT_AUTH:  return "Server Not Authoritative for zone";
+        case DNS_HEADER_RCODE_NOT_ZONE:  return "Name not contained in zone";
+        default:                         return "Unknow";
+    }
+}
+

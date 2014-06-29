@@ -56,6 +56,8 @@ const char *log_ether_type          (const uint16_t ether_type);
 const char *log_ipv4_protocol       (const uint8_t ipv4_protocol);
 const char *log_ipv6_protocol       (const uint8_t ipv6_protocol);
 const char *log_ip_port             (const uint16_t port);
+const char *log_dns_opcode          (const uint16_t opcode);
+const char *log_dns_rcode           (const uint16_t rcode);
 
 #endif
 

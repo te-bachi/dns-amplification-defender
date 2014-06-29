@@ -25,6 +25,7 @@ typedef struct _ipv4_header_t           ipv4_header_t;
 /* IPv4 header values */
 #define IPV4_HEADER_VERSION             4
 #define IPV4_HEADER_IHL                 5           /* 5 x 32-bit = 160-bit = 20-byte */
+#define IPV4_HEADER_MASK_FLAGS          0xE000
 #define IPV4_HEADER_MASK_DONT_FRAGMENT  0x4000
 #define IPV4_HEADER_MASK_MORE_FRAGMENT  0x2000
 

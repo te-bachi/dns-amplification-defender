@@ -108,7 +108,7 @@ udpv4_header_decode(raw_packet_t *raw_packet, packet_offset_t udpv4_offset)
     udpv4_header_t *udpv4 = udpv4_header_new();
     
     if (raw_packet->len < (udpv4_offset + UDPV4_HEADER_LEN)) {
-        LOG_PRINTLN(LOG_HEADER_UDPV4, LOG_ERROR, ("decode UDP packet: size too small (present=%u, required=%u)", raw_packet->len, (udpv4_offset + UDPV4_HEADER_LEN)));
+        LOG_PRINTLN(LOG_HEADER_UDPV4, LOG_ERROR, ("decode UDPv4 header: size too small (present=%u, required=%u)", raw_packet->len - udpv4_offset, UDPV4_HEADER_LEN));
         UDPV4_FAILURE_EXIT;
     }
     

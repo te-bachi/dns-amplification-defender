@@ -97,7 +97,7 @@ ipv4_header_decode(raw_packet_t *raw_packet, packet_offset_t ipv4_offset)
     if (ipv4->version == IPV4_HEADER_VERSION) {
         
         if (raw_packet->len < (ipv4_offset + IPV4_HEADER_LEN)) {
-            LOG_PRINTLN(LOG_HEADER_IPV4, LOG_ERROR, ("decode IPv4 packet: size too small (present=%u, required=%u)", raw_packet->len, (ipv4_offset + IPV4_HEADER_LEN)));
+            LOG_PRINTLN(LOG_HEADER_IPV4, LOG_ERROR, ("decode IPv4 header: size too small (present=%u, required=%u)", raw_packet->len - ipv4_offset, IPV4_HEADER_LEN));
             IPV4_FAILURE_EXIT;
         }
         
