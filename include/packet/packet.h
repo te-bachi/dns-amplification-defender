@@ -30,6 +30,7 @@ struct _packet_t {
     ethernet_header_t      *ether;
 };
 
+packet_t *      packet_new(void);
 bool            packet_init(packet_t *packet);
 bool            packet_encode(packet_t *packet, raw_packet_t *raw_packet);
 packet_t       *packet_decode(raw_packet_t *raw_packet);

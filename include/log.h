@@ -85,7 +85,7 @@ extern const char      *LOG_CATEGORY_STRING[];
 extern const char      *LOG_LEVEL_STRING[];
 extern bool             log_enabled;                /**< don't use it directly! use functions */
 
-void log_init();
+void log_init(void);
 
 static inline void log_enable()  { log_enabled = true;  }
 static inline void log_disable() { log_enabled = false; }
