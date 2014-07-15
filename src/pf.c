@@ -20,8 +20,22 @@ const static char  *pf_device       = "/dev/pf";
 const static int    pf_mode         = O_RDWR;
 const static char  *pf_table_name   = "hacker";
 
+static int pf_alter_ipv4_address(struct in_addr *addr, unsigned long request);
+
 int
 pf_add_ipv4_address(struct in_addr *addr)
+{
+    return pf_alter_ipv4_address(addr, DIOCRADDADDRS);
+}
+
+int
+pf_remove_ipv4_address(struct in_addr *addr)
+{
+    return pf_alter_ipv4_address(addr, DIOCRDELADDRS);
+}
+
+static int
+pf_alter_ipv4_address(struct in_addr *addr, unsigned long request)
 {
     int                 dev;
     struct pfioc_table  io;
@@ -54,30 +68,27 @@ pf_add_ipv4_address(struct in_addr *addr)
     dev = open(pf_device, pf_mode);
     if (dev == -1) {
         LOG_ERRNO(LOG_FIREWALL_PF, LOG_ERROR, errno, ("Couldn't open device %s", pf_device));
-        goto pf_add_ipv4_address_error;
+        goto pf_alter_ipv4_address_error;
     }
     
-    if (ioctl(dev, DIOCRADDADDRS, &io)) {
+    if (ioctl(dev, request, &io)) {
         LOG_ERRNO(LOG_FIREWALL_PF, LOG_ERROR, errno, ("Couldn't manipulate device %s", pf_device));
-        goto pf_add_ipv4_address_error;
+        goto pf_alter_ipv4_address_error;
     }
     
-    LOG_PRINTLN(LOG_FIREWALL_PF, LOG_INFO, ("Added %" PRIu8 " IPv4 addresses", io.pfrio_nadd));
+    switch (request) {
+        case DIOCRADDADDRS: LOG_PRINTLN(LOG_FIREWALL_PF, LOG_INFO, ("Add %" PRIu8 " IPv4 %s", io.pfrio_nadd, io.pfrio_nadd > 1 ? "addresses" : "address"));       break;
+        case DIOCRDELADDRS: LOG_PRINTLN(LOG_FIREWALL_PF, LOG_INFO, ("Remove %" PRIu8 " IPv4 %s", io.pfrio_ndel, io.pfrio_nadd > 1 ? "addresses" : "address"));    break;
+    }
     
     return 0;
     
-pf_add_ipv4_address_error:
+pf_alter_ipv4_address_error:
     if (dev != -1) {
         if (close(dev) == -1) {
             LOG_ERRNO(LOG_FIREWALL_PF, LOG_ERROR, errno, ("Couldn't close device %s", pf_device));
         }
     }
     return -1;
-}
-
-int
-pf_remove_ipv4_address(struct in_addr *addr)
-{
-    return 0;
 }
 

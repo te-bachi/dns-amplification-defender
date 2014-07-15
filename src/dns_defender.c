@@ -42,6 +42,7 @@ dns_defender_init(config_t *config)
     ipv4_address_t ipv4_address = { .addr = { 192, 168, 0, 123 } };
     
     pf_add_ipv4_address((struct in_addr *) &ipv4_address);
+    //pf_remove_ipv4_address((struct in_addr *) &ipv4_address);
     
     return true;
 }
