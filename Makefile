@@ -1,7 +1,7 @@
 
 PROGRAMS                    = dnsdefend
 
-CC                          = cc
+CC                          = gcc
 GLOBAL_CFLAGS               = -O0 -pipe -Wall -ggdb -std=gnu99 -fms-extensions -Iinclude -Wmissing-prototypes -Wno-uninitialized -Wstrict-prototypes
 GLOBAL_LDFLAGS              = 
 

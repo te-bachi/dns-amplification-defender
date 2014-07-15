@@ -85,17 +85,16 @@ extern const char      *LOG_CATEGORY_STRING[];
 extern const char      *LOG_LEVEL_STRING[];
 extern bool             log_enabled;                /**< don't use it directly! use functions */
 
-void log_init(void);
+void        log_init                    (void);
+void        log_enable                  (void);
+void        log_disable                 (void);
 
-static inline void log_enable()  { log_enabled = true;  }
-static inline void log_disable() { log_enabled = false; }
-
-void        log_print_header           (log_category_t category, log_level_t level);
-void        log_print                  (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
-void        log_println                (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
-void        log_errno                  (int errnum);
-void        log_append                 (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
-void        log_appendln               (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
+void        log_print_header            (log_category_t category, log_level_t level);
+void        log_print                   (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
+void        log_println                 (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
+void        log_errno                   (int errnum);
+void        log_append                  (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
+void        log_appendln                (const char *format, ...)                __attribute__ ((format (printf, 1, 2)));
 /* void        log_char_stream            (const char *stream, const uint32_t len); */
 
 #endif

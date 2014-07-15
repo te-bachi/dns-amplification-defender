@@ -39,9 +39,21 @@ const char *LOG_LEVEL_STRING[] = {
 };
 
 void
-log_init()
+log_init(void)
 {
     //
+}
+
+void 
+log_enable(void)
+{
+    log_enabled = true;
+}
+
+void
+log_disable(void)
+{
+    log_enabled = false;
 }
 
 /*** MESSAGES ****************************************************************/
