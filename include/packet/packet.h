@@ -9,6 +9,7 @@ typedef uint16_t                        packet_offset_t;        /**< Offset of o
 typedef uint32_t                        packet_type_t;          /**< Bit-field variable PACKET_TYPE */
 
 #include "packet/net_address.h"
+#include "packet/network_interface.h"
 #include "packet/raw_packet.h"
 #include "packet/ethernet_header.h"
 

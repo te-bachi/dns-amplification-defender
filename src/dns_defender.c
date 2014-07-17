@@ -11,9 +11,10 @@
 #include <errno.h>
 
 typedef struct _dns_defender_t {
-    bool                running;
-    int                 bpf;
-    unsigned int        bpf_buf_len;
+    bool                    running;
+    int                     bpf;
+    unsigned int            bpf_buf_len;
+    network_interface_t     netif;
 } dns_defender_t;
 
 static dns_defender_t dns_defender;
@@ -44,26 +45,10 @@ dns_defender_init(config_t *config)
     pf_add_ipv4_address((struct in_addr *) &ipv4_address);
     //pf_remove_ipv4_address((struct in_addr *) &ipv4_address);
     
+    network_interface_init(&dns_defender.netif, "eth0");
+    
     return true;
 }
-
-/*
-    raw_packet_t    raw_packet = {
-        .len  = 70,
-        .data = { 0x00, 0x15, 0x17, 0x0e, 0x61, 0xa2, 0x00, 0x03,
-                  0x6c, 0xb3, 0x54, 0x1b, 0x08, 0x00, 0x45, 0x00,
-                  0x00, 0x38, 0xfa, 0xd6, 0x00, 0x00, 0xf3, 0x11,
-                  0x92, 0x32, 0xbc, 0x5f, 0x1d, 0xb1, 0xc3, 0x86,
-                  0x9d, 0x14, 0xd5, 0x03, 0x00, 0x35, 0x00, 0x24,
-                  0x00, 0x00, 0x46, 0x14, 0x01, 0x00, 0x00, 0x01,
-                  0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
-                  0xff, 0x00, 0x01, 0x00, 0x00, 0x29, 0x23, 0x28,
-                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
-    };
-    
-    packet = packet_decode(&raw_packet);
-    object_release(packet);
-*/
 
 int
 dns_defender_mainloop(void)

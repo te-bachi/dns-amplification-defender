@@ -74,7 +74,7 @@ log_print_header(log_category_t category, log_level_t level)
     localtime_r(&now, &local);
     
     LOG_PRINTF(LOG_STREAM, "[%02" PRId8 ".%02" PRId8 ".%04" PRId8 " %02" PRId8 ":%02" PRId8 ":%02" PRId8 "]",
-                           local.tm_mday, local.tm_mon, local.tm_year + 1900,
+                           local.tm_mday, local.tm_mon + 1, local.tm_year + 1900,
                            local.tm_hour, local.tm_min, local.tm_sec);
 
     LOG_HEADER_CATEGORY(category);

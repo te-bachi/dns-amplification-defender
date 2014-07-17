@@ -1,7 +1,7 @@
 
 PROGRAMS                    = dnsdefend
 
-CC                          = gcc
+CC                          = cc
 GLOBAL_CFLAGS               = -O0 -pipe -Wall -ggdb -std=gnu99 -fms-extensions -Iinclude -Wmissing-prototypes -Wno-uninitialized -Wstrict-prototypes
 GLOBAL_LDFLAGS              = 
 
@@ -18,6 +18,7 @@ dnsdefend_SOURCE            = main.c \
                               log.c \
                               log_network.c \
                               packet/net_address.c \
+                              packet/network_interface.c \
                               packet/raw_packet.c \
                               packet/packet.c \
                               packet/ethernet_header.c \
