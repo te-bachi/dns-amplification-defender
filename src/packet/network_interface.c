@@ -10,6 +10,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/param.h>
 
 #include <netinet/in.h>
 #include <net/ethernet.h>
@@ -25,11 +26,11 @@ static char * sock_ntop_host(const struct sockaddr *sa);
 static char *
 sock_ntop_host(const struct sockaddr *sa)
 {
-    static char str[128];       /* Unix domain is largest */
+    static char str[128]; /* Unix domain is largest */
 
     switch (sa->sa_family) {
     case AF_INET: {
-        struct sockaddr_in  *sin = (struct sockaddr_in *) sa;
+        struct sockaddr_in *sin = (struct sockaddr_in *) sa;
 
         if (inet_ntop(AF_INET, &sin->sin_addr, str, sizeof(str)) == NULL)
             return(NULL);
@@ -45,10 +46,10 @@ sock_ntop_host(const struct sockaddr *sa)
     }
     
     case AF_UNIX: {
-        struct sockaddr_un  *unp = (struct sockaddr_un *) sa;
+        struct sockaddr_un *unp = (struct sockaddr_un *) sa;
 
             /* OK to have no pathname bound to the socket: happens on
-               every connect() unless client calls bind() first. */
+every connect() unless client calls bind() first. */
         if (unp->sun_path[0] == 0)
             strcpy(str, "(no pathname bound)");
         else
@@ -57,7 +58,7 @@ sock_ntop_host(const struct sockaddr *sa)
     }
     
     case AF_LINK: {
-        struct sockaddr_dl  *sdl = (struct sockaddr_dl *) sa;
+        struct sockaddr_dl *sdl = (struct sockaddr_dl *) sa;
 
         if (sdl->sdl_alen > 0)
             //snprintf(str, sizeof(str), "%*s", sdl->sdl_alen, &sdl->sdl_data[sdl->sdl_nlen]);
@@ -79,102 +80,74 @@ sock_ntop_host(const struct sockaddr *sa)
 bool
 network_interface_init(network_interface_t *netif, const char *name)
 {
-    int             sockfd;
-    struct ifconf   ifc;
-    char            start_buf[8];
-    caddr_t         buf, ptr, cptr;
-    struct ifreq   *ifr;
-    struct ifreq    ifrcopy;
-    int             len = 1024;
-    int             lastlen;
-    char           *sdlname;
-    int             idx;
-    char           *haddr;
-    int             hlen;
-    char            ifname[IFNAMSIZ];
+    int                     sockfd;
+    int                     n;
+    struct ifconf           ifc;
+    struct ifreq           *ifr;
+    int                     ifr_num;
+    int                     idx;
+    
+    struct sockaddr_in     *sin;
+    struct sockaddr_in6    *sin6;
+    struct sockaddr_dl     *sdl;
+    
     char           *addr_str;
     
-    struct sockaddr      sa;
-    struct sockaddr_in  *sinptr;
-    struct sockaddr_in6 *sin6ptr;
-    struct sockaddr_un  *unp;
-    struct sockaddr_dl  *sdl;
+    /* string copy name */
+    strncpy(netif->name, name, NETWORK_INTERFACE_NAME_SIZE);
     
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    /* set to zero */
+    memcpy(netif->mac.addr, MAC_ADDRESS_NULL.addr, MAC_ADDRESS_LEN);
+    netif->vlan = NULL;
+    netif->ipv4 = NULL;
+    netif->ipv6 = NULL;
     
-    ifc.ifc_len = 8;
-    ifc.ifc_buf = start_buf;
-    
-    if (ioctl(sockfd, SIOCGIFCONF, &ifc) < 0) {
-        LOG_PRINTLN(LOG_NETWORK_INTERFACE, LOG_ERROR, ("ioctl 1: len=%d", ifc.ifc_len));
-        return false;
-    }
-    LOG_PRINTLN(LOG_NETWORK_INTERFACE, LOG_ERROR, ("ioctl 1: len=%d", ifc.ifc_len));
-    
-    if ((buf = malloc(ifc.ifc_len)) == NULL) {
-        LOG_PRINTLN(LOG_NETWORK_INTERFACE, LOG_ERROR, ("malloc"));
+    /* create socket (required for ioctl) */
+    if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        LOG_ERRNO(LOG_NETWORK_INTERFACE, LOG_ERROR, errno, ("socket failed"));
         return false;
     }
     
-    ifc.ifc_buf = buf;
-    
-    if (ioctl(sockfd, SIOCGIFCONF, &ifc) < 0) {
-        LOG_PRINTLN(LOG_NETWORK_INTERFACE, LOG_ERROR, ("ioctl 2: len=%d", ifc.ifc_len));
-        return false;
-    }
-    
-    for (ptr = buf; ptr < buf + ifc.ifc_len; ) {
-        ifr = (struct ifreq *) ptr;
-
-        len = ifr->ifr_addr.sa_len;
-        ptr += sizeof(ifr->ifr_name) + len; 
-        // 
-        // if (ifr->ifr_addr.sa_family == AF_LINK) {
-            // struct sockaddr_dl *sdl = (struct sockaddr_dl *) &ifr->ifr_addr;
-            // sdlname = ifr->ifr_name;
-            // idx = sdl->sdl_index;
-            // haddr = sdl->sdl_data + sdl->sdl_nlen;
-            // hlen = sdl->sdl_alen;
-        // }
-            
-        // if ( (cptr = strchr(ifr->ifr_name, ':')) != NULL)
-            // *cptr = 0;      /* replace colon with null */
-            // 
-        // ifrcopy = *ifr;
-        // if (ioctl(sockfd, SIOCGIFFLAGS, &ifrcopy) < 0)
-            // printf("ioctl");
-        // 
-        // if (sdlname == NULL || strcmp(sdlname, ifr->ifr_name) != 0)
-            // idx = hlen = 0;
-            // 
-        // if (hlen)
-            // memcpy(&sa, haddr, hlen);
-
-        /*
-        switch (ifr->ifr_addr.sa_family) {
-        case AF_INET:
-            sinptr = (struct sockaddr_in *) &ifr->ifr_addr;
-            addr_str = sock_ntop_host((const struct sockaddr *) sinptr, sizeof(struct sockaddr_in));
-            break;
-
-        case AF_INET6:
-            sin6ptr = (struct sockaddr_in6 *) &ifr->ifr_addr;
-            addr_str = sock_ntop_host((const struct sockaddr *) sin6ptr, sizeof(struct sockaddr_in6));
-        
-        case AF_LINK:
-            sdl = (struct sockaddr_dl *) &ifr->ifr_addr;
-            sdlname = ifr->ifr_name;
-            idx = sdl->sdl_index;
-            haddr = sdl->sdl_data + sdl->sdl_nlen;
-            hlen = sdl->sdl_alen;
-            addr_str = sock_ntop_host((const struct sockaddr *) sdl, sizeof(struct sockaddr_dl));
-        default:
-            
-            break;
+    /* get interface configuration over ioctl */
+    bzero(&ifc, sizeof(ifc));
+    n   = 1;
+    ifr = NULL;
+    do {
+        /* allocate as much memory as ioctl wants to have */
+        n *= 2;
+        if ((ifr = realloc(ifr, PAGE_SIZE * n)) == NULL) {
+            LOG_ERRNO(LOG_NETWORK_INTERFACE, LOG_ERROR, errno, ("realloc failed"));
         }
-        */
-        addr_str = sock_ntop_host((const struct sockaddr *) &ifr->ifr_addr);
-        printf("\t%s family=%u ip addr: %s\n", ifr->ifr_name, ifr->ifr_addr.sa_family, addr_str);
+        bzero(ifr, PAGE_SIZE * n);
+        ifc.ifc_req = ifr;
+        ifc.ifc_len = n * PAGE_SIZE;
+        
+    /* if not successfully, retry with more allocated memory */
+    } while ((ioctl(sockfd, SIOCGIFCONF, &ifc) == -1) || (ifc.ifc_len >= ((n - 1) * PAGE_SIZE)));
+    ifr_num = ifc.ifc_len / sizeof(struct ifreq);
+    LOG_PRINTLN(LOG_NETWORK_INTERFACE, LOG_ERROR, ("len = %d, ifr_num = %d", ifc.ifc_len, ifr_num));
+    
+    /* if ptr not reaches end of buf */
+    for (idx = 0; idx < ifr_num; idx++) {
+        
+        /* network interface name matches */
+        if (strcmp(name, ifr[idx].ifr_name) == 0) {
+        
+            switch (ifr[idx].ifr_addr.sa_family) {
+                case AF_INET:   sin = (struct sockaddr_in *) &ifr[idx].ifr_addr;
+                                break;
+                
+                case AF_INET6:  sin6 = (struct sockaddr_in6 *) &ifr[idx].ifr_addr;
+                                break;
+                
+                case AF_LINK:   sdl = (struct sockaddr_dl *) &ifr[idx].ifr_addr;
+                                break;
+                                
+                default:        continue;
+            }
+        }
+        addr_str = sock_ntop_host((const struct sockaddr *) &ifr[idx].ifr_addr);
+        printf("\t%s family=%u ip addr: %s\n", ifr[idx].ifr_name, ifr[idx].ifr_addr.sa_family, addr_str);
 
         //if ((ifrcopy.ifr_flags & IFF_UP) && ((ifrcopy.ifr_flags & IFF_LOOPBACK) == 0)) {
         //    strncpy(ifname, ifr->ifr_name, IFNAMSIZ); 
@@ -184,7 +157,6 @@ network_interface_init(network_interface_t *netif, const char *name)
     
     return true;
 }
-
 
 static vlan_t *
 network_interface_create_vlan(void)
@@ -202,5 +174,29 @@ static ipv6_alias_t *
 network_interface_create_ipv6_alias(void)
 {
     return (ipv6_alias_t *) malloc(sizeof(ipv6_alias_t));
+}
+
+bool
+network_interface_add_mac_address(network_interface_t *netif, const mac_address_t *mac)
+{
+    
+}
+
+bool
+network_interface_add_vlan(network_interface_t *netif, const uint16_t vid)
+{
+    
+}
+
+bool
+network_interface_add_ipv4_address(network_interface_t *netif, const ipv4_address_t *address, const ipv4_address_t *netmask, const ipv4_address_t *gateway)
+{
+    
+}
+
+bool
+network_interface_add_ipv6_address(network_interface_t *netif, const ipv6_address_t *address, const uint8_t prefixlen, ipv6_state_t state)
+{
+    
 }
 
