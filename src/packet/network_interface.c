@@ -16,6 +16,10 @@
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_dl.h>
+#include <net/if_var.h>
+#include <net/if_vlan_var.h>
+
+#include <ifaddrs.h>
 
 static vlan_t       *network_interface_create_vlan(void);
 static ipv4_alias_t *network_interface_create_ipv4_alias(void);
@@ -82,16 +86,23 @@ network_interface_init(network_interface_t *netif, const char *name)
 {
     int                     sockfd;
     int                     n;
+    caddr_t                 buf, ptr;
     struct ifconf           ifc;
-    struct ifreq           *ifr;
-    int                     ifr_num;
-    int                     idx;
+    struct ifreq           *ifcr;
+    struct ifreq            ifr;
+    struct vlanreq          vreq;
+    int                     len;
     
-    struct sockaddr_in     *sin;
-    struct sockaddr_in6    *sin6;
-    struct sockaddr_dl     *sdl;
+    mac_address_t          *mac;
+    ipv4_address_t         *ipv4_address;
+    ipv4_address_t         *ipv4_broadcast;
+    ipv4_address_t         *ipv4_netmask;
+    ipv6_address_t         *ipv6_address;
+    
+    
     
     char           *addr_str;
+    char           vlan_str[64];
     
     /* string copy name */
     strncpy(netif->name, name, NETWORK_INTERFACE_NAME_SIZE);
@@ -111,48 +122,125 @@ network_interface_init(network_interface_t *netif, const char *name)
     /* get interface configuration over ioctl */
     bzero(&ifc, sizeof(ifc));
     n   = 1;
-    ifr = NULL;
+    buf = NULL;
     do {
         /* allocate as much memory as ioctl wants to have */
         n *= 2;
-        if ((ifr = realloc(ifr, PAGE_SIZE * n)) == NULL) {
+        if ((buf = realloc(buf, PAGE_SIZE * n)) == NULL) {
             LOG_ERRNO(LOG_NETWORK_INTERFACE, LOG_ERROR, errno, ("realloc failed"));
         }
-        bzero(ifr, PAGE_SIZE * n);
-        ifc.ifc_req = ifr;
+        bzero(buf, PAGE_SIZE * n);
+        ifc.ifc_buf = buf;
         ifc.ifc_len = n * PAGE_SIZE;
         
     /* if not successfully, retry with more allocated memory */
     } while ((ioctl(sockfd, SIOCGIFCONF, &ifc) == -1) || (ifc.ifc_len >= ((n - 1) * PAGE_SIZE)));
-    ifr_num = ifc.ifc_len / sizeof(struct ifreq);
-    LOG_PRINTLN(LOG_NETWORK_INTERFACE, LOG_ERROR, ("len = %d, ifr_num = %d", ifc.ifc_len, ifr_num));
     
     /* if ptr not reaches end of buf */
-    for (idx = 0; idx < ifr_num; idx++) {
+    for (ptr = buf; ptr < (buf + ifc.ifc_len); ) {
+        ifcr = (struct ifreq *) ptr;
+        len = ifcr->ifr_addr.sa_len;
+        ptr += sizeof(ifcr->ifr_name) + len; 
         
         /* network interface name matches */
-        if (strcmp(name, ifr[idx].ifr_name) == 0) {
+        if (strcmp(name, ifcr->ifr_name) == 0) {
         
-            switch (ifr[idx].ifr_addr.sa_family) {
-                case AF_INET:   sin = (struct sockaddr_in *) &ifr[idx].ifr_addr;
+            switch (ifcr->ifr_addr.sa_family) {
+                case AF_INET:   //ipv4_address = (struct ipv4_address *)  &ifcr->ifr_addr;
+
                                 break;
                 
-                case AF_INET6:  sin6 = (struct sockaddr_in6 *) &ifr[idx].ifr_addr;
+                case AF_INET6:  //sin6 = (struct sockaddr_in6 *) &ifcr->ifr_addr;
                                 break;
                 
-                case AF_LINK:   sdl = (struct sockaddr_dl *) &ifr[idx].ifr_addr;
+                case AF_LINK:   //sdl  = (struct sockaddr_dl *)  &ifcr->ifr_addr;
                                 break;
                                 
                 default:        continue;
             }
+            
         }
-        addr_str = sock_ntop_host((const struct sockaddr *) &ifr[idx].ifr_addr);
-        printf("\t%s family=%u ip addr: %s\n", ifr[idx].ifr_name, ifr[idx].ifr_addr.sa_family, addr_str);
+        
+        
+        bzero((char *) &ifr, sizeof(ifr));
+        strcpy(ifr.ifr_name, ifcr->ifr_name);
+        bzero((char *) &vreq, sizeof(vreq));
+        ifr.ifr_data = (caddr_t) &vreq;
+        if (ioctl(sockfd, SIOCGETVLAN, &ifr) != -1) {
+            snprintf(vlan_str, sizeof(vlan_str), "vid=%u parent=%s", vreq.vlr_tag, vreq.vlr_parent[0] == '\0' ? "<none>" : vreq.vlr_parent);
+        } else {
+            snprintf(vlan_str, sizeof(vlan_str), "no VLAN interface");
+        }
+        
+        addr_str = sock_ntop_host((const struct sockaddr *) &ifcr->ifr_addr);
+        printf("\t%s family=%u ip addr: %s vlan: %s\n", ifcr->ifr_name, ifcr->ifr_addr.sa_family, addr_str, vlan_str);
 
         //if ((ifrcopy.ifr_flags & IFF_UP) && ((ifrcopy.ifr_flags & IFF_LOOPBACK) == 0)) {
         //    strncpy(ifname, ifr->ifr_name, IFNAMSIZ); 
         //    break;
         //}
+    }
+    
+    {
+        struct ifaddrs         *myaddrs, *ifa;
+        struct sockaddr_in     *s4;
+        struct sockaddr_in     *s4broad;
+        struct sockaddr_in     *s4net;
+        struct sockaddr_in6    *s6;
+        struct sockaddr_in6    *s6broad;
+        struct sockaddr_in6    *s6net;
+        struct sockaddr_dl     *sdl;
+        struct sockaddr_dl     *sdlbroad;
+        struct sockaddr_dl     *sdlnet;
+        int                     status;
+        char                    buf[64];
+        char                    buf2[64];
+        char                    buf3[64];
+        
+        status = getifaddrs(&myaddrs);
+        if (status != 0) {
+            perror("getifaddrs");
+            exit(1);
+        }
+        
+        for (ifa = myaddrs; ifa != NULL; ifa = ifa->ifa_next) {
+            if (ifa->ifa_addr == NULL) continue;
+            if ((ifa->ifa_flags & IFF_UP) == 0) continue;
+            
+            if (ifa->ifa_addr->sa_family == AF_INET) {
+                s4      = (struct sockaddr_in *)(ifa->ifa_addr);
+                s4broad = (struct sockaddr_in *)(ifa->ifa_broadaddr);
+                s4net   = (struct sockaddr_in *)(ifa->ifa_netmask);
+                if (inet_ntop(ifa->ifa_addr->sa_family, (void *)&(s4->sin_addr),      buf,  sizeof(buf))  == NULL ||
+                    inet_ntop(ifa->ifa_addr->sa_family, (void *)&(s4broad->sin_addr), buf2, sizeof(buf2)) == NULL ||
+                    inet_ntop(ifa->ifa_addr->sa_family, (void *)&(s4net->sin_addr),   buf3, sizeof(buf3)) == NULL) {
+                    printf("%s: inet_ntop failed!\n", ifa->ifa_name);
+                } else {
+                    printf("%s: %s %s %s\n", ifa->ifa_name, buf, buf2, buf3);
+                }
+            } else if (ifa->ifa_addr->sa_family == AF_INET6) {
+                s6      = (struct sockaddr_in6 *)(ifa->ifa_addr);
+                s6broad = (struct sockaddr_in6 *)(ifa->ifa_broadaddr);
+                s6net   = (struct sockaddr_in6 *)(ifa->ifa_netmask);
+                if (inet_ntop(ifa->ifa_addr->sa_family, (void *)&(s6->sin6_addr),      buf,  sizeof(buf))  == NULL ||
+                    inet_ntop(ifa->ifa_addr->sa_family, (void *)&(s6net->sin6_addr),   buf3, sizeof(buf3)) == NULL) {
+                    printf("%s: inet_ntop failed!\n", ifa->ifa_name);
+                } else {
+                    printf("%s: %s %s %s\n", ifa->ifa_name, buf, buf2, buf3);
+                }
+            } else if (ifa->ifa_addr->sa_family == AF_LINK) {
+                sdl      = (struct sockaddr_dl *)(ifa->ifa_addr);
+                sdlbroad = (struct sockaddr_dl *)(ifa->ifa_broadaddr);
+                sdlnet   = (struct sockaddr_dl *)(ifa->ifa_netmask);
+                
+                if (sdl->sdl_alen > 0)
+                    printf("%s: %s\n", ifa->ifa_name, ether_ntoa((const struct ether_addr *) LLADDR(sdl)));
+                else
+                    printf("%s: <Link#%d>\n", ifa->ifa_name, sdl->sdl_index);
+            }
+        }
+        
+        freeifaddrs(myaddrs);
     }
     
     return true;
@@ -189,7 +277,7 @@ network_interface_add_vlan(network_interface_t *netif, const uint16_t vid)
 }
 
 bool
-network_interface_add_ipv4_address(network_interface_t *netif, const ipv4_address_t *address, const ipv4_address_t *netmask, const ipv4_address_t *gateway)
+network_interface_add_ipv4_address(network_interface_t *netif, const ipv4_address_t *address, const ipv4_address_t *broadcast, const ipv4_address_t *netmask, const ipv4_address_t *gateway)
 {
     
 }

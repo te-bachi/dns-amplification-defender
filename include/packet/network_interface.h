@@ -29,6 +29,7 @@ typedef struct _vlan_t          vlan_t;
 
 struct _ipv4_alias_t {
     ipv4_address_t          address;
+    ipv4_address_t          broadcast;
     ipv4_address_t          netmask;
     ipv4_address_t          gateway;
     ipv4_alias_t           *next;
@@ -57,7 +58,7 @@ typedef struct _network_interface_t {
 bool        network_interface_init              (network_interface_t *netif, const char *name);
 bool        network_interface_add_mac_address   (network_interface_t *netif, const mac_address_t *mac);
 bool        network_interface_add_vlan          (network_interface_t *netif, const uint16_t vid);
-bool        network_interface_add_ipv4_address  (network_interface_t *netif, const ipv4_address_t *address, const ipv4_address_t *netmask, const ipv4_address_t *gateway);
+bool        network_interface_add_ipv4_address  (network_interface_t *netif, const ipv4_address_t *address, const ipv4_address_t *broadcast, const ipv4_address_t *netmask, const ipv4_address_t *gateway);
 bool        network_interface_add_ipv6_address  (network_interface_t *netif, const ipv6_address_t *address, const uint8_t prefixlen, ipv6_state_t state);
 
 #endif

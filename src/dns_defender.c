@@ -45,7 +45,9 @@ dns_defender_init(config_t *config)
     pf_add_ipv4_address((struct in_addr *) &ipv4_address);
     //pf_remove_ipv4_address((struct in_addr *) &ipv4_address);
     
-    network_interface_init(&dns_defender.netif, "eth0");
+    if (!network_interface_init(&dns_defender.netif, "eth0")) {
+        return false;
+    }
     
     return true;
 }
