@@ -31,7 +31,7 @@ static struct bpf_insn bpf_filter[] = {
                                                                              *   pc = 2, if true: offset 0, otherwise: offset 8 (pc += (A == k) ? jt : jf) */
             /* Make sure it's a UDP packet... */
 /*  3 */    BPF_STMT(BPF_LD + BPF_B + BPF_ABS, 23),                         /**< Copy absolute byte (BPF_B) value 23 to accumulator: packet offset */
-/*  4 */    BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, IPV4_PROTOCOL_UDP, 0, 6),   /**< Jump to offset if accumulator equals (BPF_JEQ) to constant (BPF_K) IPPROTO_UDP:
+/*  4 */    BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, IPV4_PROTOCOL_UDP, 0, 6),   /**< Jump to offset if accumulator equals (BPF_JEQ) to constant (BPF_K) IPV4_PROTOCOL_UDP:
                                                                               *   pc = 4, if true: 4 + 0 = 4, otherwise: 4 + 6 = 10 */
 
             /* Make sure this isn't a fragment... */

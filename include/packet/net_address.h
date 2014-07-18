@@ -5,6 +5,10 @@
 #include <stdbool.h>
 #include <arpa/inet.h>
 
+#define MAC_ADDRESS(x)          ((mac_address_t  *) x)
+#define IPV4_ADDRESS(x)         ((ipv4_address_t *) x)
+#define IPV6_ADDRESS(x)         ((ipv6_address_t *) x)
+
 #define MAC_ADDRESS_LEN         6
 #define MAC_ADDRESS_WW_LEN      2
 #define IPV4_ADDRESS_LEN        4
