@@ -90,7 +90,7 @@ network_interface_init(network_interface_t *netif, const char *name)
                                 strncpy(ifr.ifr_name, netif->name, NETWORK_INTERFACE_NAME_SIZE);
                                 ifr.ifr_data = (caddr_t) &vreq;
                                 if (ioctl(sockfd, SIOCGETVLAN, &ifr) != -1) {
-                                    network_interface_add_vlan(netif, vreq.vlr_tag);
+                                    network_interface_add_vid(netif, vreq.vlr_tag);
                                 }
                                 break;
                 
@@ -134,7 +134,7 @@ network_interface_add_mac_address(network_interface_t *netif, const mac_address_
 }
 
 bool
-network_interface_add_vlan(network_interface_t *netif, const uint16_t vid)
+network_interface_add_vid(network_interface_t *netif, const uint16_t vid)
 {
     vlan_t *vlan;
     
@@ -186,6 +186,36 @@ network_interface_add_ipv6_address(network_interface_t *netif, const ipv6_addres
     }
     
     ipv6 = network_interface_create_ipv6_alias();
+    ipv6->next  = netif->ipv6;
+    netif->ipv6 = ipv6;
+    
+    return true;
+}
+
+bool
+network_interface_add_vlan(network_interface_t *netif, vlan_t *vlan)
+{
+    if (netif->vlan != NULL) {
+        LOG_PRINTLN(LOG_NETWORK_INTERFACE, LOG_WARNING, ("overwrite VLAN       vid = %u", netif->vlan->vid));
+    }
+    
+    netif->vlan = vlan;
+    
+    return true;
+}
+
+bool
+network_interface_add_ipv4_alias(network_interface_t *netif, ipv4_alias_t *ipv4)
+{
+    ipv4->next  = netif->ipv4;
+    netif->ipv4 = ipv4;
+    
+    return true;
+}
+
+bool
+network_interface_add_ipv6_alias(network_interface_t *netif, ipv6_alias_t *ipv6)
+{
     ipv6->next  = netif->ipv6;
     netif->ipv6 = ipv6;
     

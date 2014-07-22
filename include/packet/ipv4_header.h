@@ -38,6 +38,8 @@ typedef struct _ipv4_header_t           ipv4_header_t;
 #define IPV4_PORT_DNS                   53
 
 struct _ipv4_header_t {
+    header_t            header;
+    
     union {
         uint8_t         ver_ihl;
         struct {
@@ -68,8 +70,6 @@ struct _ipv4_header_t {
     uint16_t            checksum;
     ipv4_address_t      src;
     ipv4_address_t      dest;
-    
-    udpv4_header_t     *udpv4;
 };
 
 ipv4_header_t  *ipv4_header_new     (void);

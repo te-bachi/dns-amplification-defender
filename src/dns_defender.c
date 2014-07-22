@@ -14,7 +14,7 @@ typedef struct _dns_defender_t {
     bool                    running;
     int                     bpf;
     unsigned int            bpf_buf_len;
-    network_interface_t     netif;
+    netif_t                 netif;
 } dns_defender_t;
 
 static dns_defender_t dns_defender;

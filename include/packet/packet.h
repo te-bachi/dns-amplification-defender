@@ -4,37 +4,66 @@
 #include "object.h"
 
 typedef struct _packet_t                packet_t;
+typedef struct _header_t                header_t;
+typedef enum   _header_type_t           header_type_t;
 typedef uint16_t                        packet_len_t;           /**< Length in bytes, 2^16 = 65536  ==>  big enough */
 typedef uint16_t                        packet_offset_t;        /**< Offset of origin */
-typedef uint32_t                        packet_type_t;          /**< Bit-field variable PACKET_TYPE */
+
+enum _header_type_t {
+    PACKET_TYPE_ETHERNET,
+    PACKET_TYPE_VLAN,
+    PACKET_TYPE_ARP,
+    PACKET_TYPE_IPV4,
+    PACKET_TYPE_IPV6,
+    PACKET_TYPE_UDPV4,
+    PACKET_TYPE_TCPV4,
+    PACKET_TYPE_UDPV6,
+    PACKET_TYPE_TCPV6,
+    PACKET_TYPE_DNS,
+    PACKET_TYPE_IGNORE,
+    PACKET_TYPE_ALL
+};
+
+/**
+ * A header has has a next header (payload) and
+ * could have a previous header (header)
+ *
+ * |_____________________|
+ * |                     |
+ * |     Next Header     |
+ * |_____________________|
+ * |                     |
+ * |       Header        |
+ * |_____________________|
+ * |                     |
+ * |   Previous Header   |
+ * |_____________________|
+ * |                     |
+ *
+ */
+struct _header_t {
+    header_type_t           type;
+    header_t               *prev;
+    header_t               *next;
+};
 
 #include "packet/net_address.h"
 #include "packet/network_interface.h"
 #include "packet/raw_packet.h"
 #include "packet/ethernet_header.h"
 
-#define PACKET_TYPE_ETHERNET            0x00000001
-#define PACKET_TYPE_VLAN                0x00000002
-#define PACKET_TYPE_ARP                 0x00000004
-#define PACKET_TYPE_IPV4                0x00000010
-#define PACKET_TYPE_IPV6                0x00000020
-#define PACKET_TYPE_UDPV4               0x00000100
-#define PACKET_TYPE_TCPV4               0x00000200
-#define PACKET_TYPE_UDPV6               0x00000400
-#define PACKET_TYPE_TCPV6               0x00000800
-#define PACKET_TYPE_IGNORE              0x80000000
-#define PACKET_TYPE_ALL                 0x7fffffff
-
+/**
+ * A packet has only a payload (Layer 2)
+ */
 struct _packet_t {
     object_t                obj;
-    packet_type_t           type;
-    ethernet_header_t      *ether;
+    header_t               *payload;
 };
 
-packet_t *      packet_new(void);
-bool            packet_init(packet_t *packet);
-bool            packet_encode(packet_t *packet, raw_packet_t *raw_packet);
-packet_t       *packet_decode(raw_packet_t *raw_packet);
+packet_t *      packet_new      (void);
+bool            packet_init     (packet_t *packet);
+bool            packet_encode   (netif_t *netif, raw_packet_t *raw_packet, packet_t *packet);
+packet_t       *packet_decode   (netif_t *netif, raw_packet_t *raw_packet);
 
 #endif
 

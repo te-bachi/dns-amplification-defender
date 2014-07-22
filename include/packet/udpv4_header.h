@@ -21,12 +21,12 @@ typedef struct _udpv4_header_t              udpv4_header_t;
 #define UDPV4_HEADER_PSEUDO_IPV4_LEN        2
 
 struct _udpv4_header_t {
+    header_t        header;
+    
     uint16_t        src_port;
     uint16_t        dest_port;
     uint16_t        len;
     uint16_t        checksum;
-    
-    dns_header_t   *dns;
 };
 
 udpv4_header_t *udpv4_header_new    (void);

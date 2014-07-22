@@ -45,12 +45,12 @@ typedef struct _vlan_header_t {
 } vlan_header_t;
 
 struct _ethernet_header_t {
+    header_t            header;
+    
     mac_address_t       dest;
     mac_address_t       src;
     uint16_t            type;
     vlan_header_t       vlan;
-    
-    ipv4_header_t      *ipv4;
 };
 
 ethernet_header_t  *ethernet_header_new     (void);

@@ -88,6 +88,8 @@ typedef struct _dns_resource_record_t       dns_resource_record_t;
   *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
   */
 struct _dns_header_t {
+    header_t                        header;
+    
     uint16_t                        id;             /**< Identifier */
     union {                         
         uint16_t                    raw;
