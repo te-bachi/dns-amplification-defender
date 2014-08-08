@@ -45,7 +45,7 @@ dns_defender_init(config_t *config)
     pf_add_ipv4_address((struct in_addr *) &ipv4_address);
     //pf_remove_ipv4_address((struct in_addr *) &ipv4_address);
     
-    if (!network_interface_init(&dns_defender.netif, config->ifname)) {
+    if (!netif_init(&dns_defender.netif, config->ifname)) {
         return false;
     }
     
@@ -61,11 +61,11 @@ dns_defender_mainloop(void)
     while (dns_defender.running) {
         if (bpf_read(dns_defender.bpf, &raw_packet, dns_defender.bpf_buf_len)) {
             LOG_RAW_PACKET(LOG_DNS_DEFENDER, LOG_INFO, &raw_packet, ("RX"));
-            packet = packet_decode(&raw_packet);
-            log_ethernet_header(packet->ether);
-            log_ipv4_header(packet->ether->ipv4);
-            log_udpv4_header(packet->ether->ipv4->udpv4);
-            log_dns_header(packet->ether->ipv4->udpv4->dns);
+            packet = packet_decode(&dns_defender.netif, &raw_packet);
+            //log_ethernet_header(packet->ether);
+            //log_ipv4_header(packet->ether->ipv4);
+            //log_udpv4_header(packet->ether->ipv4->udpv4);
+            //log_dns_header(packet->ether->ipv4->udpv4->dns);
             object_release(packet);
         }
     }

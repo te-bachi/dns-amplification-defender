@@ -30,7 +30,9 @@ packet_destructor(void *ptr)
 {
     packet_t *packet = (packet_t *) ptr;
     
-    if (packet->ether != NULL)  ethernet_header_free(packet->ether);
+    if (packet->payload != NULL && packet->payload.type == PACKET_TYPE_ETHERNET) {
+        ethernet_header_free(packet->ether);
+    }
 }
 
 bool

@@ -6,6 +6,7 @@
 typedef struct _packet_t                packet_t;
 typedef struct _header_t                header_t;
 typedef enum   _header_type_t           header_type_t;
+typedef struct _header_class_t          header_class_t;
 typedef uint16_t                        packet_len_t;           /**< Length in bytes, 2^16 = 65536  ==>  big enough */
 typedef uint16_t                        packet_offset_t;        /**< Offset of origin */
 
@@ -24,25 +25,32 @@ enum _header_type_t {
     PACKET_TYPE_ALL
 };
 
+struct _header_class_t {
+    header_type_t           type;
+    uint16_t                size;
+    
+    
+};
+
 /**
  * A header has has a next header (payload) and
  * could have a previous header (header)
  *
  * |_____________________|
  * |                     |
- * |     Next Header     |
+ * |     Next Header     | Layer n + 1
  * |_____________________|
  * |                     |
- * |       Header        |
+ * |       Header        | Layer n
  * |_____________________|
  * |                     |
- * |   Previous Header   |
+ * |   Previous Header   | Layer n - 1
  * |_____________________|
  * |                     |
  *
  */
 struct _header_t {
-    header_type_t           type;
+    header_class_t          klass;
     header_t               *prev;
     header_t               *next;
 };
@@ -51,6 +59,11 @@ struct _header_t {
 #include "packet/network_interface.h"
 #include "packet/raw_packet.h"
 #include "packet/ethernet_header.h"
+
+typedef header_t     *(*decode_fn)(netif_t *netif, raw_packet_t *raw_packet);
+typedef packet_len_t  (*encode_fn)(netif_t *netif, raw_packet_t *raw_packet, header_t *header);
+typedef packet_len_t  (*encode_fn)(netif_t *netif, raw_packet_t *raw_packet, header_t *header);
+typedef header_t     *(*decode_fn)(netif_t *netif, raw_packet_t *raw_packet);
 
 /**
  * A packet has only a payload (Layer 2)
