@@ -62,6 +62,7 @@ dns_defender_mainloop(void)
         if (bpf_read(dns_defender.bpf, &raw_packet, dns_defender.bpf_buf_len)) {
             LOG_RAW_PACKET(LOG_DNS_DEFENDER, LOG_INFO, &raw_packet, ("RX"));
             packet = packet_decode(&dns_defender.netif, &raw_packet);
+            log_packet(packet);
             //log_ethernet_header(packet->ether);
             //log_ipv4_header(packet->ether->ipv4);
             //log_udpv4_header(packet->ether->ipv4->udpv4);

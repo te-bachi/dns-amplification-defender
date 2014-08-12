@@ -25,6 +25,13 @@ enum _header_type_t {
     PACKET_TYPE_ALL
 };
 
+#include "packet/net_address.h"
+#include "packet/network_interface.h"
+#include "packet/raw_packet.h"
+
+typedef header_t     *(*decode_fn)(netif_t *netif, raw_packet_t *raw_packet);
+typedef packet_len_t  (*encode_fn)(netif_t *netif, raw_packet_t *raw_packet, header_t *header);
+
 struct _header_class_t {
     header_type_t           type;
     uint16_t                size;
@@ -50,20 +57,10 @@ struct _header_class_t {
  *
  */
 struct _header_t {
-    header_class_t          klass;
+    header_class_t         *klass;
     header_t               *prev;
     header_t               *next;
 };
-
-#include "packet/net_address.h"
-#include "packet/network_interface.h"
-#include "packet/raw_packet.h"
-#include "packet/ethernet_header.h"
-
-typedef header_t     *(*decode_fn)(netif_t *netif, raw_packet_t *raw_packet);
-typedef packet_len_t  (*encode_fn)(netif_t *netif, raw_packet_t *raw_packet, header_t *header);
-typedef packet_len_t  (*encode_fn)(netif_t *netif, raw_packet_t *raw_packet, header_t *header);
-typedef header_t     *(*decode_fn)(netif_t *netif, raw_packet_t *raw_packet);
 
 /**
  * A packet has only a payload (Layer 2)
@@ -72,6 +69,8 @@ struct _packet_t {
     object_t                obj;
     header_t               *payload;
 };
+
+#include "packet/ethernet_header.h"
 
 packet_t *      packet_new      (void);
 bool            packet_init     (packet_t *packet);

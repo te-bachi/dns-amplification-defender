@@ -72,6 +72,26 @@ log_raw_packet(const raw_packet_t *raw_packet)
     }
 }
 
+
+void
+log_packet(const packet_t *packet)
+{
+    header_t    *header;
+    
+    header = packet->payload;
+    
+    while (header != NULL) {
+        switch (header->klass->type) {
+            case PACKET_TYPE_ETHERNET:  log_ethernet_header((const ethernet_header_t *) header);    break;
+            case PACKET_TYPE_IPV4:      log_ipv4_header((const ipv4_header_t *) header);            break;
+            case PACKET_TYPE_UDPV4:     log_udpv4_header((const udpv4_header_t *) header);          break;
+            case PACKET_TYPE_DNS:       log_dns_header((const dns_header_t *) header);              break;
+            default:                                                                                break;
+        }
+        header = header->next;
+    }
+}
+
 void
 log_ethernet_header(const ethernet_header_t *ether_header)
 {

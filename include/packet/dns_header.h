@@ -293,8 +293,8 @@ struct _dns_resource_record_ptr_t {
 
 dns_header_t   *dns_header_new      (void);
 void            dns_header_free     (dns_header_t *dns_header);
-packet_len_t    dns_header_encode   (dns_header_t *dns_header, raw_packet_t *raw_packet, packet_offset_t dns_offset);
-dns_header_t   *dns_header_decode   (                          raw_packet_t *raw_packet, packet_offset_t dns_offset);
+packet_len_t    dns_header_encode   (netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset, header_t *header);
+header_t       *dns_header_decode   (netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset);
 
 #endif
 

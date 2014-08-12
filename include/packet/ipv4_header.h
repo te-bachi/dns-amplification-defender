@@ -74,8 +74,8 @@ struct _ipv4_header_t {
 
 ipv4_header_t  *ipv4_header_new     (void);
 void            ipv4_header_free    (ipv4_header_t *ipv4);
-packet_len_t    ipv4_header_encode  (ipv4_header_t *ipv4, raw_packet_t *raw_packet, packet_offset_t ipv4_offset);
-ipv4_header_t  *ipv4_header_decode  (                     raw_packet_t *raw_packet, packet_offset_t ipv4_offset);
+packet_len_t    ipv4_header_encode  (netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset, header_t *header);
+header_t       *ipv4_header_decode  (netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset);
 
 #endif
 

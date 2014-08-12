@@ -30,24 +30,24 @@ packet_destructor(void *ptr)
 {
     packet_t *packet = (packet_t *) ptr;
     
-    if (packet->payload != NULL && packet->payload.type == PACKET_TYPE_ETHERNET) {
-        ethernet_header_free(packet->ether);
+    if (packet->payload != NULL && packet->payload->klass->type == PACKET_TYPE_ETHERNET) {
+        //ethernet_header_free(packet->ether);
     }
 }
 
 bool
-packet_encode(packet_t *packet, raw_packet_t *raw_packet)
+packet_encode(netif_t *netif, raw_packet_t *raw_packet, packet_t *packet)
 {
-    raw_packet->len = ethernet_header_encode(packet->ether, raw_packet, 0);
+    //raw_packet->len = ethernet_header_encode(packet->ether, raw_packet, 0);
     
     return (raw_packet->len == 0) ? false : true;
 }
 
 packet_t *
-packet_decode(raw_packet_t *raw_packet)
+packet_decode(netif_t *netif, raw_packet_t *raw_packet)
 {
     packet_t *packet = packet_new();
-    packet->ether = ethernet_header_decode(raw_packet, 0);
+    packet->payload = ethernet_header_decode(netif, raw_packet, 0);
     
     return packet;
 }
