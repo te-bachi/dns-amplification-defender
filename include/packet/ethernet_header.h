@@ -54,9 +54,9 @@ struct _ethernet_header_t {
 };
 
 ethernet_header_t  *ethernet_header_new     (void);
-void                ethernet_header_free    (ethernet_header_t *ether);
-packet_len_t        ethernet_header_encode  (netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset, header_t *header);
-header_t           *ethernet_header_decode  (netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset);
+void                ethernet_header_free    (header_t *header);
+packet_len_t        ethernet_header_encode  (netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset);
+header_t           *ethernet_header_decode  (netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset);
 
 #endif
 

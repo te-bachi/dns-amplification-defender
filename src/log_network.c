@@ -78,7 +78,7 @@ log_packet(const packet_t *packet)
 {
     header_t    *header;
     
-    header = packet->payload;
+    header = packet->head;
     
     while (header != NULL) {
         switch (header->klass->type) {

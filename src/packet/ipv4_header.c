@@ -3,14 +3,15 @@
 
 #include <string.h>
 
-#define IPV4_FAILURE_EXIT   ipv4_header_free(ipv4); \
+#define IPV4_FAILURE_EXIT   ipv4_header_free((header_t *) ipv4); \
                             return NULL
 
 const static uint16_t CHECKSUM_ZERO = 0x0000;
 
 static header_class_t       klass = {
     .type   = PACKET_TYPE_IPV4,
-    .size   = sizeof(ipv4_header_t)
+    .size   = sizeof(ipv4_header_t),
+    .free   = ipv4_header_free
 };
 
 static ipv4_header_t _ipv4;
@@ -25,11 +26,11 @@ ipv4_header_new(void)
     return &_ipv4;
 }
 void
-ipv4_header_free(ipv4_header_t *ipv4)
+ipv4_header_free(header_t *header)
 {
-    LOG_PRINTLN(LOG_HEADER_IPV4, LOG_DEBUG, ("IPv4 header free"));
+    if (header->next != NULL)   header->next->klass->free(header->next);
     
-    //if (ipv4->udpv4 != NULL)    udpv4_header_free(ipv4->udpv4);
+    LOG_PRINTLN(LOG_HEADER_IPV4, LOG_DEBUG, ("IPv4 header free"));
 }
 
 /****************************************************************************
@@ -41,15 +42,16 @@ ipv4_header_free(ipv4_header_t *ipv4)
  * @return                          number of bytes written to raw packet
  ***************************************************************************/
 packet_len_t
-ipv4_header_encode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset, header_t *header)
+ipv4_header_encode(netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset)
 {
     ipv4_header_t  *ipv4;
     packet_len_t    len;
     
-    if (header->klass->type != PACKET_TYPE_IPV4) {
+    if (packet->tail->klass->type != PACKET_TYPE_IPV4) {
         return 0;
     }
-    ipv4 = (ipv4_header_t *) header;
+    ipv4            = (ipv4_header_t *) packet->tail;
+    /* don't append UDPv4 to tail! */
     
     /* IPv4 */
     if (ipv4->version != IPV4_HEADER_VERSION) {
@@ -58,7 +60,7 @@ ipv4_header_encode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t off
     
     /* decide */
     switch (ipv4->protocol) {
-        case IPV4_PROTOCOL_UDP:     len = udpv4_header_encode(netif, raw_packet, offset + IPV4_HEADER_LEN, header); break;
+        case IPV4_PROTOCOL_UDP:     len = udpv4_header_encode(netif, packet, raw_packet, offset + IPV4_HEADER_LEN); break;
         default:                                                                                                    return 0;
     }
     
@@ -99,7 +101,7 @@ ipv4_header_encode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t off
  * @param  offset                offset from origin to ip packet
  ***************************************************************************/
 header_t *
-ipv4_header_decode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset)
+ipv4_header_decode(netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset)
 {
     ipv4_header_t  *ipv4 = ipv4_header_new();
     
@@ -126,7 +128,7 @@ ipv4_header_decode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t off
         
         /* decide */
         switch (ipv4->protocol) {
-            case IPV4_PROTOCOL_UDP:     ipv4->header.next = udpv4_header_decode(netif, raw_packet, offset + IPV4_HEADER_LEN);   break;
+            case IPV4_PROTOCOL_UDP:     ipv4->header.next = udpv4_header_decode(netif, packet, raw_packet, offset + IPV4_HEADER_LEN);   break;
             default:                    IPV4_FAILURE_EXIT;
         }
         

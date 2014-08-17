@@ -4,14 +4,15 @@
 
 #include <string.h>
 
-#define DNS_FAILURE_EXIT    dns_header_free(dns); \
+#define DNS_FAILURE_EXIT    dns_header_free((header_t *) dns); \
                             return NULL
 
 //static dns_domain_name_t *dns_domain_name_new(void);
 
 static header_class_t       klass = {
     .type   = PACKET_TYPE_DNS,
-    .size   = sizeof(dns_header_t)
+    .size   = sizeof(dns_header_t),
+    .free   = dns_header_free
 };
 
 static dns_header_t _dns;
@@ -27,14 +28,13 @@ dns_header_new(void)
 }
 
 void
-dns_header_free(dns_header_t *dns_header)
+dns_header_free(header_t *header)
 {
     LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("DNS header free"));
-    
 }
 
 packet_len_t
-dns_header_encode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset, header_t *header)
+dns_header_encode(netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset)
 {
     packet_len_t    len;
     len = 0;
@@ -43,7 +43,7 @@ dns_header_encode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offs
 }
 
 header_t *
-dns_header_decode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset)
+dns_header_decode(netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset)
 {
     dns_header_t *dns = dns_header_new();
     

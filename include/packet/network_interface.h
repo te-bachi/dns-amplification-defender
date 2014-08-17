@@ -71,8 +71,8 @@ struct _ipv6_alias_t {
     ipv6_alias_t           *next;   /**< linked list */
 };
 
-bool        netif_list_init         (netif_t *netif, const char *name);
-bool        netif_list_add          (netif_t *netif, const char *name);
+bool        netif_list_init         (netif_list_t *list);
+bool        netif_list_add          (netif_list_t *list, netif_t *netif);
 
 bool        netif_init              (netif_t *netif, const char *name);
 bool        netif_add_mac_address   (netif_t *netif, const mac_address_t *mac);

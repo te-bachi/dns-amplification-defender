@@ -21,6 +21,7 @@ dnsdefend_SOURCE            = main.c \
                               packet/network_interface.c \
                               packet/raw_packet.c \
                               packet/packet.c \
+                              packet/header_storage.c \
                               packet/ethernet_header.c \
                               packet/ipv4_header.c \
                               packet/udpv4_header.c \

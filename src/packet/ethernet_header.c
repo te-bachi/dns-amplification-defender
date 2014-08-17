@@ -1,35 +1,48 @@
 
 #include "packet/ethernet_header.h"
+#include "packet/header_storage.h"
 #include "log.h"
 
 #include <string.h>
 
-#define ETHERNET_FAILURE_EXIT   ethernet_header_free(ether); \
-                                return NULL
+#define ETHERNET_STORAGE_INIT_SIZE      5
+#define ETHERNET_FAILURE_EXIT           ethernet_header_free((header_t *) ether); \
+                                        return NULL
+
+
+static ethernet_header_t    ether[ETHERNET_STORAGE_INIT_SIZE];
 
 static header_class_t       klass = {
-    .type   = PACKET_TYPE_ETHERNET,
-    .size   = sizeof(ethernet_header_t)
+    .type               = PACKET_TYPE_ETHERNET,
+    .size               = sizeof(ethernet_header_t),
+    .free               = ethernet_header_free
 };
 
-static ethernet_header_t _ether;
+static header_storage_t     storage = {
+    .klass              = &klass,
+    .assigned           = NULL,
+    .assigned_size      = 0,
+    .available          = (header_t *) ether,
+    .available_size     = ETHERNET_STORAGE_INIT_SIZE,
+    .next               = NULL
+};
 
 ethernet_header_t *
 ethernet_header_new(void)
 {
     LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("Ethernet header new"));
     
-    memset(&_ether, 0, sizeof(_ether));
-    _ether.header.klass = &klass;
-    return &_ether;
+    return (ethernet_header_t *) header_storage_assign(&storage);
 }
 
 void
-ethernet_header_free(ethernet_header_t *ether)
+ethernet_header_free(header_t *header)
 {
+    if (header->next != NULL)   header->next->klass->free(header->next);
+    
     LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("Ethernet header free"));
     
-    //if (ether->ipv4 != NULL)    ipv4_header_free(ether->ipv4);
+    header_storage_return(&storage, header);
 }
 
 /****************************************************************************
@@ -40,17 +53,18 @@ ethernet_header_free(ethernet_header_t *ether)
  * @return                          number of bytes written to raw packet
  ***************************************************************************/
 packet_len_t
-ethernet_header_encode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset, header_t *header)
+ethernet_header_encode(netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset)
 {
     ethernet_header_t  *ether;
     uint16_t            ethertype;
     packet_len_t        ethernet_len;   /**< length of this header */
     packet_len_t        len;            /**< length of the whole packet */
     
-    if (header->klass->type != PACKET_TYPE_ETHERNET) {
+    if (packet->tail->klass->type != PACKET_TYPE_ETHERNET) {
         return 0;
     }
-    ether = (ethernet_header_t *) header;
+    ether           = (ethernet_header_t *) packet->tail;
+    packet->tail    = ether->header.next;
     
     /* set packet length (= part of offset to upper layer paket) */
     if (ether->type == ETHERTYPE_VLAN) {
@@ -63,7 +77,7 @@ ethernet_header_encode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t
     
     /* decide */
     switch(ethertype) {
-        case ETHERTYPE_IPV4:    len = ipv4_header_encode(netif, raw_packet, offset + ethernet_len, header->next);   break;
+        case ETHERTYPE_IPV4:    len = ipv4_header_encode(netif, packet, raw_packet, offset + ethernet_len);         break;
         default:                                                                                                    return 0;
     }
     
@@ -94,7 +108,7 @@ ethernet_header_encode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t
  * @param  raw_packet               raw packet to be read
  ***************************************************************************/
 header_t *
-ethernet_header_decode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t offset)
+ethernet_header_decode(netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset)
 {
     ethernet_header_t  *ether = ethernet_header_new();
     uint16_t            ethertype;
@@ -133,7 +147,7 @@ ethernet_header_decode(netif_t *netif, raw_packet_t *raw_packet, packet_offset_t
     
     /* decide */
     switch(ethertype) {
-        case ETHERTYPE_IPV4:    ether->header.next = ipv4_header_decode(netif, raw_packet, offset + ethernet_len);  break;
+        case ETHERTYPE_IPV4:    ether->header.next = ipv4_header_decode(netif, packet, raw_packet, offset + ethernet_len);  break;
         default:                                                                                                    ETHERNET_FAILURE_EXIT;
     }
     
