@@ -6,7 +6,7 @@ int
 main(int argc, char *argv[])
 {
     config_t config = {
-        .ifname     = "vr0",
+        .ifname     = "re0",
         .timeout    = 1
     };
     

@@ -9,6 +9,8 @@ typedef struct _header_t                header_t;
 typedef enum   _header_type_t           header_type_t;
 typedef struct _header_class_t          header_class_t;
 
+#include "packet/header_storage.h"
+
 enum _header_type_t {
     PACKET_TYPE_ETHERNET,
     PACKET_TYPE_VLAN,
@@ -54,6 +56,8 @@ struct _header_class_t {
  */
 struct _header_t {
     header_class_t         *klass;
+    header_storage_entry_t *entry;      /**< in what storage entry it was allocated so that it can be returned to the creator */
+    uint32_t                idx;        /**< index in the allocated storage, used to return a header, @see header_storage_t */
     header_t               *prev;
     header_t               *next;
 };

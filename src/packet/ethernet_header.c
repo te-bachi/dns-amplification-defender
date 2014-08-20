@@ -5,34 +5,56 @@
 
 #include <string.h>
 
-#define ETHERNET_STORAGE_INIT_SIZE      5
+#define ETHERNET_STORAGE_INIT_SIZE      8
 #define ETHERNET_FAILURE_EXIT           ethernet_header_free((header_t *) ether); \
                                         return NULL
 
 
-static ethernet_header_t    ether[ETHERNET_STORAGE_INIT_SIZE];
+static void ethernet_header_storage_init(header_storage_t *storage);
 
-static header_class_t       klass = {
+static header_class_t           klass = {
     .type               = PACKET_TYPE_ETHERNET,
     .size               = sizeof(ethernet_header_t),
     .free               = ethernet_header_free
 };
 
-static header_storage_t     storage = {
+static header_storage_t         storage = {
     .klass              = &klass,
-    .assigned           = NULL,
-    .assigned_size      = 0,
-    .available          = (header_t *) ether,
+    .init               = ethernet_header_storage_init,
+    .head               = NULL
+};
+
+static ethernet_header_t        ether[ETHERNET_STORAGE_INIT_SIZE];
+static uint32_t                 idx[ETHERNET_STORAGE_INIT_SIZE];
+
+static header_storage_entry_t   entry = {
+    .allocator          = (header_t *) ether,
+    .allocator_size     = ETHERNET_STORAGE_INIT_SIZE,
+    .available_idxs     = idx,
     .available_size     = ETHERNET_STORAGE_INIT_SIZE,
     .next               = NULL
 };
+
+void
+ethernet_header_storage_init(header_storage_t *storage)
+{
+    uint32_t    idx;
+    
+    storage->head = &entry;
+    
+    for (idx = 0; idx < ETHERNET_STORAGE_INIT_SIZE; idx++) {
+        entry.allocator[idx].klass     = &klass;
+        entry.allocator[idx].entry     = &entry;
+        entry.allocator[idx].idx       = idx;
+    }
+}
 
 ethernet_header_t *
 ethernet_header_new(void)
 {
     LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("Ethernet header new"));
     
-    return (ethernet_header_t *) header_storage_assign(&storage);
+    return (ethernet_header_t *) header_storage_new(&storage);
 }
 
 void
@@ -42,7 +64,7 @@ ethernet_header_free(header_t *header)
     
     LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("Ethernet header free"));
     
-    header_storage_return(&storage, header);
+    header_storage_free(header);
 }
 
 /****************************************************************************

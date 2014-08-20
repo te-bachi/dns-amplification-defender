@@ -1,42 +1,67 @@
 #include "packet/header_storage.h"
 
 header_t *
-header_storage_assign(header_storage_t *storage)
+header_storage_new(header_storage_t *storage)
 {
-    header_t   *header = NULL;
-    bool        found  = false;
+    header_storage_entry_t *entry;
+    header_t               *header;
+    bool                    found  = false;
+    uint32_t                size;
+    uint32_t                idx;
+    uint32_t                available_idx;
+    
+    if (storage->head == NULL) {
+        storage->init(storage);
+    }
+    
+    entry = storage->head;
     
     do {
-        /* is there place left in the n-th storage? */
-        if (storage->available_size > 0) {
-           
+        /* is there place left in the n-th entry? */
+        if (entry->available_size > 0) {
+            available_idx                           = entry->available_idxs[entry->available_size - 1];     /**< roll up from behind */
+            header                                  = &(entry->allocator[idx]);
+            found                                   = true;
+            entry->available_size--;
         /* no place left! */
         } else {
-            /* another storage points to it? */
-            if (storage->next != NULL) {
-                /* look at the next storage in the list */
-                storage = storage->next;
+            /* another entry points to it? */
+            if (entry->next != NULL) {
+                /* look at the next entry in the list */
+                entry                               = entry->next;
             } else {
-                /* allocate a new storage */
-                storage->next                   = malloc(sizeof(header_storage_t));
-                storage->next->klass            = storage->klass;
-                storage->next->assigned         = NULL;
-                storage->next->assigned_size    = 0;
                 /* double the size */
-                storage->next->available        = malloc(2 * storage->assigned_size * storage->klass->size);
-                storage->next->available_size   = 2 * storage->assigned_size;
-                storage->next->next             = NULL;
+                size                                = 2 * entry->allocator_size;
+                
+                /* allocate a new entry */
+                entry->next                         = malloc(sizeof(header_storage_entry_t));
+                entry->next->allocator              = malloc(size * storage->klass->size);
+                entry->next->allocator_size         = size;
+                entry->next->available_idxs         = malloc(size * sizeof(uint32_t));
+                entry->next->available_size         = size;
+                entry->next->next                   = NULL;
+                
+                /* assign new entry */
+                entry                               = entry->next;
+                
+                /* set class, entry (way back to creator) and array index for every header */
+                for (idx = 0; idx < size; idx++) {
+                    entry->allocator[idx].entry     = entry;
+                    entry->allocator[idx].idx       = idx;
+                }
             }
         }
     } while (!found);
     
-    memset(header, 0, storage->klass->size);
-    header->klass = storage->klass;
     return header;
 }
 
 void
-header_storage_return(header_storage_t *storage, header_t *header)
+header_storage_free(header_t *header)
 {
+    header_storage_entry_t *entry;
     
+    entry = header->entry;
+    entry->available_idxs[entry->available_size] = header->idx;
+    entry->available_size++;
 }
