@@ -4,8 +4,9 @@
 #include "log.h"
 
 #include <string.h>
+#include <inttypes.h>
 
-#define ETHERNET_STORAGE_INIT_SIZE      8
+#define ETHERNET_STORAGE_INIT_SIZE      2
 #define ETHERNET_FAILURE_EXIT           ethernet_header_free((header_t *) ether); \
                                         return NULL
 
@@ -39,22 +40,27 @@ void
 ethernet_header_storage_init(header_storage_t *storage)
 {
     uint32_t    idx;
+    header_t   *header;
     
     storage->head = &entry;
     
     for (idx = 0; idx < ETHERNET_STORAGE_INIT_SIZE; idx++) {
-        entry.allocator[idx].klass     = &klass;
-        entry.allocator[idx].entry     = &entry;
-        entry.allocator[idx].idx       = idx;
+        header                      = (header_t *) (((uint8_t *) entry.allocator) + (idx * storage->klass->size));
+        header->klass               = &klass;
+        header->entry               = &entry;
+        header->idx                 = idx;
+        entry.available_idxs[idx]   = idx;
     }
 }
 
 ethernet_header_t *
 ethernet_header_new(void)
 {
-    LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("Ethernet header new"));
+    ethernet_header_t *header = (ethernet_header_t *) header_storage_new(&storage);
     
-    return (ethernet_header_t *) header_storage_new(&storage);
+    LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("Ethernet header new %016" PRIxPTR, (unsigned long) header));
+    
+    return header;
 }
 
 void
@@ -62,7 +68,7 @@ ethernet_header_free(header_t *header)
 {
     if (header->next != NULL)   header->next->klass->free(header->next);
     
-    LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("Ethernet header free"));
+    LOG_PRINTLN(LOG_HEADER_ETHERNET, LOG_DEBUG, ("Ethernet header free %016" PRIxPTR, (unsigned long) header));
     
     header_storage_free(header);
 }

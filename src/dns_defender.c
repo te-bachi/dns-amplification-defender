@@ -52,22 +52,36 @@ dns_defender_init(config_t *config)
     return true;
 }
 
+#define PACKET_SIZE  20
+
 int
 dns_defender_mainloop(void)
 {
-    packet_t       *packet;
+    packet_t       *packet[PACKET_SIZE];
     raw_packet_t    raw_packet;
     
     while (dns_defender.running) {
         if (bpf_read(dns_defender.bpf, &raw_packet, dns_defender.bpf_buf_len)) {
             LOG_RAW_PACKET(LOG_DNS_DEFENDER, LOG_INFO, &raw_packet, ("RX"));
-            packet = packet_decode(&dns_defender.netif, &raw_packet);
-            log_packet(packet);
+            
+            for (int i = 0; i < PACKET_SIZE; i++) {
+                packet[i] = packet_decode(&dns_defender.netif, &raw_packet);
+            }
+            
+            //log_packet(packet[0]);
+            
+            //for (int i = 0; i < 20; i++) {
+                //log_packet(packet[i]);
+            //}
             //log_ethernet_header(packet->ether);
             //log_ipv4_header(packet->ether->ipv4);
             //log_udpv4_header(packet->ether->ipv4->udpv4);
             //log_dns_header(packet->ether->ipv4->udpv4->dns);
-            object_release(packet);
+            
+            for (int i = 0; i < PACKET_SIZE; i++) {
+                object_release(packet[i]);
+            }
+            dns_defender.running = false;
         }
     }
     

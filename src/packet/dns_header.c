@@ -4,8 +4,9 @@
 
 #include <string.h>
 
-#define DNS_FAILURE_EXIT    dns_header_free((header_t *) dns); \
-                            return NULL
+#define DNS_STORAGE_INIT_SIZE           8
+#define DNS_FAILURE_EXIT                dns_header_free((header_t *) dns); \
+                                        return NULL
 
 //static dns_domain_name_t *dns_domain_name_new(void);
 

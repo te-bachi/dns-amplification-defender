@@ -1,4 +1,7 @@
 #include "packet/header_storage.h"
+#include "log.h"
+
+#include <inttypes.h>
 
 header_t *
 header_storage_new(header_storage_t *storage)
@@ -8,7 +11,6 @@ header_storage_new(header_storage_t *storage)
     bool                    found  = false;
     uint32_t                size;
     uint32_t                idx;
-    uint32_t                available_idx;
     
     if (storage->head == NULL) {
         storage->init(storage);
@@ -19,10 +21,13 @@ header_storage_new(header_storage_t *storage)
     do {
         /* is there place left in the n-th entry? */
         if (entry->available_size > 0) {
-            available_idx                           = entry->available_idxs[entry->available_size - 1];     /**< roll up from behind */
-            header                                  = &(entry->allocator[idx]);
+            idx                                     = entry->available_idxs[entry->available_size - 1];     /**< roll up from behind */
+            header                                  = (header_t *) (((uint8_t *) entry->allocator) + (idx * storage->klass->size));
             found                                   = true;
             entry->available_size--;
+            
+            LOG_PRINTLN(LOG_HEADER_STORAGE, LOG_DEBUG, ("found header storage entry = 0x%016" PRIxPTR ", header = 0x%016" PRIxPTR ", index = %" PRIu32, (unsigned long) entry, (unsigned long) header, idx));
+            
         /* no place left! */
         } else {
             /* another entry points to it? */
@@ -44,10 +49,17 @@ header_storage_new(header_storage_t *storage)
                 /* assign new entry */
                 entry                               = entry->next;
                 
+                LOG_PRINTLN(LOG_HEADER_STORAGE, LOG_DEBUG, ("allocate header storage entry = 0x%016" PRIxPTR ", size = %" PRIu32, (unsigned long) entry, size));
+                
                 /* set class, entry (way back to creator) and array index for every header */
                 for (idx = 0; idx < size; idx++) {
-                    entry->allocator[idx].entry     = entry;
-                    entry->allocator[idx].idx       = idx;
+                    header                          = (header_t *) (((uint8_t *) entry->allocator) + (idx * storage->klass->size));
+                    header->klass                   = storage->klass;
+                    header->entry                   = entry;
+                    header->idx                     = idx;
+                    entry->available_idxs[idx]      = idx;
+                    
+                    LOG_PRINTLN(LOG_HEADER_STORAGE, LOG_DEBUG, ("assign header = 0x%016" PRIxPTR ", index = %" PRIu32, (unsigned long) header, idx));
                 }
             }
         }
@@ -62,6 +74,9 @@ header_storage_free(header_t *header)
     header_storage_entry_t *entry;
     
     entry = header->entry;
+    
+    LOG_PRINTLN(LOG_HEADER_STORAGE, LOG_DEBUG, ("free header = 0x%016" PRIxPTR ", index = %" PRIu32 ", header storage entry = 0x%016" PRIxPTR ", available size = %" PRIu32, (unsigned long) header, header->idx, (unsigned long) entry, entry->available_size));
+    
     entry->available_idxs[entry->available_size] = header->idx;
     entry->available_size++;
 }
