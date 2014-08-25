@@ -14,9 +14,6 @@ struct _header_storage_entry_t {
     header_storage_entry_t *next;
 };
 
-typedef void (*header_storage_init_fn)(header_storage_t *storage);
-
-
 /**
  * Every header has its own storage
  * 
@@ -24,13 +21,13 @@ typedef void (*header_storage_init_fn)(header_storage_t *storage);
  */
 struct _header_storage_t {
     header_class_t         *klass;
-    header_storage_init_fn  init;
     
     /**
      * Storage can only be extended, not relocated, because headers could
      * be assigned and addresses are given out!
      */
     header_storage_entry_t *head;
+    header_storage_entry_t *start;
 };
 
 header_t   *header_storage_new(header_storage_t *storage);
