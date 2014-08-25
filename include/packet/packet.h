@@ -23,8 +23,6 @@ struct _packet_t {
     header_t               *tail;
 };
 
-#include "packet/ethernet_header.h"
-
 bool            packet_init     (void);
 packet_t *      packet_new      (void);
 bool            packet_encode   (netif_t *netif, packet_t *packet, raw_packet_t *raw_packet);

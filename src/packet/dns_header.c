@@ -3,6 +3,7 @@
 #include "log.h"
 
 #include <string.h>
+#include <inttypes.h>
 
 #define DNS_STORAGE_INIT_SIZE           8
 #define DNS_FAILURE_EXIT                dns_header_free((header_t *) dns); \
@@ -10,28 +11,45 @@
 
 //static dns_domain_name_t *dns_domain_name_new(void);
 
-static header_class_t       klass = {
-    .type   = PACKET_TYPE_DNS,
-    .size   = sizeof(dns_header_t),
-    .free   = dns_header_free
+static dns_header_t             dns[DNS_STORAGE_INIT_SIZE];
+static uint32_t                 idx[DNS_STORAGE_INIT_SIZE];
+
+static header_class_t           klass = {
+    .type               = PACKET_TYPE_DNS,
+    .size               = sizeof(dns_header_t),
+    .free               = dns_header_free
 };
 
-static dns_header_t _dns;
+static header_storage_entry_t   entry = {
+    .allocator          = (header_t *) dns,
+    .allocator_size     = DNS_STORAGE_INIT_SIZE,
+    .available_idxs     = idx,
+    .available_size     = DNS_STORAGE_INIT_SIZE,
+    .next               = NULL
+};
+
+static header_storage_t         storage = {
+    .klass              = &klass,
+    .head               = NULL,
+    .init               = &entry
+};
 
 dns_header_t *
 dns_header_new(void)
 {
-    LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("DNS header new"));
+    dns_header_t *header = (dns_header_t *) header_storage_new(&storage);
     
-    memset(&_dns, 0, sizeof(dns_header_t));
-    _dns.header.klass = &klass;
-    return &_dns;
+    LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("DNS header new 0x%016" PRIxPTR, (unsigned long) header));
+    
+    return header;
 }
 
 void
 dns_header_free(header_t *header)
 {
-    LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("DNS header free"));
+    LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("DNS header free 0x%016" PRIxPTR, (unsigned long) header));
+    
+    header_storage_free(header);
 }
 
 packet_len_t

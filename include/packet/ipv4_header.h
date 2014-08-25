@@ -4,7 +4,6 @@
 typedef struct _ipv4_header_t           ipv4_header_t;
 
 #include "packet/packet.h"
-#include "packet/udpv4_header.h"
 #include "packet/net_address.h"
 
 /* length on the wire! */

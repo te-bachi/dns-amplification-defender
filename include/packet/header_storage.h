@@ -8,9 +8,9 @@ typedef struct _header_storage_entry_t  header_storage_entry_t;
 
 struct _header_storage_entry_t {
     header_t               *allocator;          /**< headers itself (address of allocated memory) */
-    uint32_t                allocator_size;     /**< */
+    uint32_t                allocator_size;     /**< how many headers have been allocated (static number) */
     uint32_t               *available_idxs;     /**< index array of available headers */
-    uint32_t                available_size;
+    uint32_t                available_size;     /**< how many headers are available (dynamic number) */
     header_storage_entry_t *next;
 };
 
@@ -27,7 +27,7 @@ struct _header_storage_t {
      * be assigned and addresses are given out!
      */
     header_storage_entry_t *head;
-    header_storage_entry_t *start;
+    header_storage_entry_t *init;
 };
 
 header_t   *header_storage_new(header_storage_t *storage);

@@ -4,26 +4,43 @@
 #include "log.h"
 
 #include <string.h>
+#include <inttypes.h>
 
-#define UDPV4_FAILURE_EXIT  udpv4_header_free((header_t *) udpv4); \
-                            return NULL
+#define UDPV4_STORAGE_INIT_SIZE     2
+#define UDPV4_FAILURE_EXIT          udpv4_header_free((header_t *) udpv4); \
+                                    return NULL
 
-static header_class_t       klass = {
-    .type   = PACKET_TYPE_UDPV4,
-    .size   = sizeof(udpv4_header_t),
-    .free   = udpv4_header_free
+static udpv4_header_t           udpv4[UDPV4_STORAGE_INIT_SIZE];
+static uint32_t                 idx[UDPV4_STORAGE_INIT_SIZE];
+
+static header_class_t           klass = {
+    .type               = PACKET_TYPE_UDPV4,
+    .size               = sizeof(udpv4_header_t),
+    .free               = udpv4_header_free
 };
 
-static udpv4_header_t _udpv4;
+static header_storage_entry_t   entry = {
+    .allocator          = (header_t *) udpv4,
+    .allocator_size     = UDPV4_STORAGE_INIT_SIZE,
+    .available_idxs     = idx,
+    .available_size     = UDPV4_STORAGE_INIT_SIZE,
+    .next               = NULL
+};
+
+static header_storage_t         storage = {
+    .klass              = &klass,
+    .head               = NULL,
+    .init               = &entry
+};
 
 udpv4_header_t *
 udpv4_header_new(void)
 {
-    LOG_PRINTLN(LOG_HEADER_UDPV4, LOG_DEBUG, ("UDPv4 header new"));
+    udpv4_header_t *header = (udpv4_header_t *) header_storage_new(&storage);
     
-    memset(&_udpv4, 0, sizeof(udpv4_header_t));
-    _udpv4.header.klass = &klass;
-    return &_udpv4;
+    LOG_PRINTLN(LOG_HEADER_UDPV4, LOG_DEBUG, ("UDPv4 header new 0x%016" PRIxPTR, (unsigned long) header));
+    
+    return header;
 }
 
 void
@@ -31,7 +48,9 @@ udpv4_header_free(header_t *header)
 {
     if (header->next != NULL)   header->next->klass->free(header->next);
     
-    LOG_PRINTLN(LOG_HEADER_UDPV4, LOG_DEBUG, ("UDPv4 header free"));
+    LOG_PRINTLN(LOG_HEADER_UDPV4, LOG_DEBUG, ("UDPv4 header free 0x%016" PRIxPTR, (unsigned long) header));
+    
+    header_storage_free(header);
 }
 
 packet_len_t

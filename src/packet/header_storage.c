@@ -15,8 +15,8 @@ header_storage_new(header_storage_t *storage)
     uint32_t                idx;
     
     if (storage->head == NULL) {
-        storage->head = storage->start;
-        header_storage_assign(storage, storage->start, storage->start->allocator_size);
+        storage->head = storage->init;
+        header_storage_assign(storage, storage->head, storage->head->allocator_size);
     }
     
     entry = storage->head;
@@ -26,10 +26,13 @@ header_storage_new(header_storage_t *storage)
         if (entry->available_size > 0) {
             idx                                     = entry->available_idxs[entry->available_size - 1];     /**< roll up from behind */
             header                                  = (header_t *) (((uint8_t *) entry->allocator) + (idx * storage->klass->size));
-            found                                   = true;
-            entry->available_size--;
+            header->prev                            = NULL;
+            header->next                            = NULL;
             
             LOG_PRINTLN(LOG_HEADER_STORAGE, LOG_DEBUG, ("found header storage entry = 0x%016" PRIxPTR ", header = 0x%016" PRIxPTR ", index = %" PRIu32, (unsigned long) entry, (unsigned long) header, idx));
+            
+            found                                   = true;
+            entry->available_size--;
             
         /* no place left! */
         } else {

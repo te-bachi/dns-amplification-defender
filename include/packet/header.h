@@ -57,10 +57,15 @@ struct _header_class_t {
 struct _header_t {
     header_class_t         *klass;
     header_storage_entry_t *entry;      /**< in what storage entry it was allocated so that it can be returned to the creator */
-    uint32_t                idx;        /**< index in the allocated storage, used to return a header, @see header_storage_t */
+    uint32_t                idx;        /**< index in the allocated storage, used to return a header to the storage, @see header_storage_t */
     header_t               *prev;
     header_t               *next;
 };
+
+#include "packet/ethernet_header.h"
+#include "packet/ipv4_header.h"
+#include "packet/udpv4_header.h"
+#include "packet/dns_header.h"
 
 #endif
 

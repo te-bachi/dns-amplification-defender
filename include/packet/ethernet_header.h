@@ -4,7 +4,6 @@
 typedef struct _ethernet_header_t       ethernet_header_t;
 
 #include "packet/packet.h"
-#include "packet/ipv4_header.h"
 
 /* length on the wire! */
 #define ETHERNET_HEADER_LEN             14

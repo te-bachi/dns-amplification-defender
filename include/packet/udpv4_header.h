@@ -4,7 +4,6 @@
 typedef struct _udpv4_header_t              udpv4_header_t;
 
 #include "packet/packet.h"
-#include "packet/dns_header.h"
 
 /* length on the wire! */
 #define UDPV4_HEADER_LEN                    8
