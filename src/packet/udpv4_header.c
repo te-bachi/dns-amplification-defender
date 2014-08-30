@@ -3,6 +3,7 @@
 #include "packet/port.h"
 #include "log.h"
 
+#include <stdbool.h>
 #include <string.h>
 #include <inttypes.h>
 
@@ -140,6 +141,8 @@ header_t *
 udpv4_header_decode(netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset)
 {
     udpv4_header_t *udpv4 = udpv4_header_new();
+    uint16_t        low_port;
+    uint16_t        high_port;
     
     if (raw_packet->len < (offset + UDPV4_HEADER_LEN)) {
         LOG_PRINTLN(LOG_HEADER_UDPV4, LOG_ERROR, ("decode UDPv4 header: size too small (present=%u, required=%u)", raw_packet->len - offset, UDPV4_HEADER_LEN));
@@ -153,7 +156,26 @@ udpv4_header_decode(netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, 
     uint8_to_uint16(&(udpv4->checksum),  &(raw_packet->data[offset + UDPV4_HEADER_OFFSET_CHECKSUM]));
     
     /* decide */
-    switch (udpv4->dest_port) {
+    if (udpv4->src_port < udpv4->dest_port) {
+        low_port    = udpv4->src_port;
+        high_port   = udpv4->dest_port;
+    } else {
+        low_port    = udpv4->dest_port;
+        high_port   = udpv4->src_port;
+    }
+    
+    switch (low_port) {
+        case PORT_DNS:      udpv4->header.next = dns_header_decode(netif, packet, raw_packet, offset + UDPV4_HEADER_LEN);       break;
+        default:            break;
+    }
+    
+    /* if next header is filled in, return... */
+    if (udpv4->header.next != NULL) {
+        return (header_t *) udpv4;
+    }
+    
+    /* ...otherwise try again with high port */
+    switch (high_port) {
         case PORT_DNS:      udpv4->header.next = dns_header_decode(netif, packet, raw_packet, offset + UDPV4_HEADER_LEN);       break;
         default:            UDPV4_FAILURE_EXIT;
     }

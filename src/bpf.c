@@ -23,33 +23,50 @@
 
 #define BPF_DEVICE_MAX      99
 
+/**
+ * A      is the accumulator
+ * X      is the index register
+ * P[i:n] is packet data
+ *
+ * ex.
+ * BPF_STMT(BPF_LD  + BPF_W + BPF_ABS, k)     A <= P[k:4]           Load packet data from byte offset k with length 4 to accumulator
+ * BPF_STMT(BPF_LD  + BPF_B + BPF_IND, k)     A <= P[X+k:1]         Load packet data from byte offset k with length 1 and index register offset to accumulator
+ *
+ * BPF_STMT(BPF_LDX + BPF_W + BPF_IMM, k)     X <= k                Load constant k to index register
+ * BPF_STMT(BPF_LDX + BPF_B + BPF_MSH, k)     X <= 4*(P[k:1]&0xf)   Load packet data from byte offset k with length 1, bitwise AND second nibble,
+ *                                                                  multiply with 4, to index register (= IPv4 header length: 5 * 4 = 20)
+ */
 static struct bpf_insn bpf_filter[] = {
     
             /* Make sure this is an IP packet... */
-/*  1 */    BPF_STMT(BPF_LD + BPF_H + BPF_ABS, 12),                         /**< Copy absolute (BPF_ABS) half-word (BPF_H) value 12 to accumulator: packet offset, 6 Dest. MAC + 6 Src. MAC = 12 */
+/*  1 */    BPF_STMT(BPF_LD + BPF_H + BPF_ABS, 12),                         /**< Load absolute (BPF_ABS) half-word (BPF_H) offset 12 to accumulator: Destination MAC (6) + Source MAC (6) = 12 packet offset */
 /*  2 */    BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_IPV4, 0, 8),      /**< Jump to offset if accumulator equals (BPF_JEQ) to constant (BPF_K) ETHERTYPE_IP:
                                                                              *   pc = 2, if true: offset 0, otherwise: offset 8 (pc += (A == k) ? jt : jf) */
             /* Make sure it's a UDP packet... */
-/*  3 */    BPF_STMT(BPF_LD + BPF_B + BPF_ABS, 23),                         /**< Copy absolute byte (BPF_B) value 23 to accumulator: packet offset */
+/*  3 */    BPF_STMT(BPF_LD + BPF_B + BPF_ABS, 23),                         /**< Load absolute byte (BPF_B) offset 23 to accumulator: ethernet header (14) + Version/IHL (1) + DSCP (1) + Total Length (2) + ID (2) + Flags/Fragment Offset (2) + TTL (1) = 23 packet offset */
 /*  4 */    BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, IPV4_PROTOCOL_UDP, 0, 6),   /**< Jump to offset if accumulator equals (BPF_JEQ) to constant (BPF_K) IPV4_PROTOCOL_UDP:
                                                                               *   pc = 4, if true: 4 + 0 = 4, otherwise: 4 + 6 = 10 */
 
             /* Make sure this isn't a fragment... */
-/*  5 */    BPF_STMT(BPF_LD + BPF_H + BPF_ABS, 20),                         /**< Copy absolute half-word value 20 to accumulator: packet offset */
-/*  6 */    BPF_JUMP(BPF_JMP + BPF_JSET + BPF_K, 0x1fff, 4, 0),             /**< Jump to offset if accumulator bitwise AND (BPF_JSET) to constant (BPF_K) BPF_JSET: */
+/*  5 */    BPF_STMT(BPF_LD + BPF_H + BPF_ABS, 20),                         /**< Load absolute half-word offset 20 to accumulator: ethernet header (14) + Version/IHL (1) + DSCP (1) + Total Length (2) + ID (2) = 20 packet offset */
+/*  6 */    BPF_JUMP(BPF_JMP + BPF_JSET + BPF_K, 0x1fff, 4, 0),             /**< Jump to offset if accumulator bitwise AND to constant BPF_JSET */
 
             /* Get the IP header length... */
-/*  7 */    BPF_STMT(BPF_LDX + BPF_B + BPF_MSH, 14),
+/*  7 */    BPF_STMT(BPF_LDX + BPF_B + BPF_MSH, 14),                        /**< Load IPv4 header length (BPF_MSH) from byte (BPF_B) offset 14 to index register (BPF_LDX) */
 
-            /* Make sure it's to the right port... */
-/*  8 */    BPF_STMT(BPF_LD + BPF_H + BPF_IND, 16),
-/*  9 */    BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, PORT_DNS, 0, 1),
+            /* Make sure it's to the right source port... */
+/*  8 */    BPF_STMT(BPF_LD + BPF_H + BPF_IND, 14),                         /**< Load indirect (BPF_IND) half-word (BPF_H) offset 14 to accumulator: ethernet header (14) = 14 packet offset */
+/*  9 */    BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, PORT_DNS, 2, 0),
+
+            /* ... or destination port */
+/* 10 */    BPF_STMT(BPF_LD + BPF_H + BPF_IND, 16),                         /**< Load indirect (BPF_IND) half-word (BPF_H) offset 16 to accumulator: ethernet header (14)  + source port (2) = 16 packet offset */
+/* 11 */    BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, PORT_DNS, 0, 1),
 
             /* If we passed all the tests, ask for the whole packet. */
-/* 10 */    BPF_STMT(BPF_RET+BPF_K, (u_int)-1),
+/* 12 */    BPF_STMT(BPF_RET+BPF_K, (u_int)-1),
 
             /* Otherwise, drop it. */
-/* 11 */    BPF_STMT(BPF_RET+BPF_K, 0)
+/* 13 */    BPF_STMT(BPF_RET+BPF_K, 0)
 
 };
 

@@ -154,6 +154,7 @@ log_udpv4_header(const udpv4_header_t *udpv4_header)
 void
 log_dns_header(const dns_header_t *dns_header)
 {
+    uint32_t idx;
     LOG_PRINTF(LOG_STREAM, "DNS Header\n");
     
     LOG_PRINTF(LOG_STREAM, "   |-Identifier                         0x%04" PRIx16   "          (%" PRIu16 ")\n",     dns_header->id,           dns_header->id);
@@ -168,6 +169,12 @@ log_dns_header(const dns_header_t *dns_header)
     LOG_PRINTF(LOG_STREAM, "      |-Checking Disabled    (cd)       %s\n",                                           dns_header->flags.cd ? "set" : "not set");
     LOG_PRINTF(LOG_STREAM, "      |-Response Code        (rcode)    %s (%" PRIu16 ")\n",               log_dns_rcode(dns_header->flags.rcode), dns_header->flags.rcode);
     LOG_PRINTF(LOG_STREAM, "   |-Questions                          %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->qd_count,  dns_header->qd_count);
+    for (idx = 0; idx < dns_header->qd_count; idx++) {
+
+        LOG_PRINTF(LOG_STREAM, "      |-Name                            %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->qd_count,  dns_header->qd_count);
+        LOG_PRINTF(LOG_STREAM, "      |-Type                            %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->qd_count,  dns_header->qd_count);
+        LOG_PRINTF(LOG_STREAM, "      |-Class                           %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->qd_count,  dns_header->qd_count);
+    }
     LOG_PRINTF(LOG_STREAM, "   |-Answer RRs                         %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->an_count,  dns_header->an_count);
     LOG_PRINTF(LOG_STREAM, "   |-Authority RRs                      %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->ns_count,  dns_header->ns_count);
     LOG_PRINTF(LOG_STREAM, "   |-Additional RRs                     %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->ar_count,  dns_header->ar_count);
@@ -315,3 +322,25 @@ log_dns_rcode(const uint16_t rcode)
     }
 }
 
+const char *
+log_dns_type(const uint16_t type) {
+    switch (type) {
+        case DNS_RR_TYPE_A:             return "";
+        case DNS_RR_TYPE_NS:            return "";
+        case DNS_RR_TYPE_MD:            return "";
+        case DNS_RR_TYPE_MF:            return "";
+        case DNS_RR_TYPE_CNAME:         return "";
+        case DNS_RR_TYPE_SOA:           return "";
+        case DNS_RR_TYPE_MB:            return "";
+        case DNS_RR_TYPE_MG:            return "";
+        case DNS_RR_TYPE_MR:            return "";
+        case DNS_RR_TYPE_NULL:          return "";
+        case DNS_RR_TYPE_WKS:           return "";
+        case DNS_RR_TYPE_PTR:           return "";
+        case DNS_RR_TYPE_HINFO:         return "";
+        case DNS_RR_TYPE_MINFO:         return "";
+        case DNS_RR_TYPE_MX:            return "";
+        case DNS_RR_TYPE_TXT:           return "";
+        default:                        return "Unknow";
+    }
+}

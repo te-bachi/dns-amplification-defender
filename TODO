@@ -1,0 +1,8 @@
+
+packet:
+    - decode()
+      o new: no TYPE_header_new(), directly call header_storage_new(&storage);
+        ==> less function calls (for debugging purpose it's ok for now)
+        maybe export (extern) storage and don't use new() anymore resp. remove new()
+      o free: can't be reduced. must be recursively used => function pointer
+
