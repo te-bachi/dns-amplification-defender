@@ -154,7 +154,6 @@ log_udpv4_header(const udpv4_header_t *udpv4_header)
 void
 log_dns_header(const dns_header_t *dns_header)
 {
-    uint32_t idx;
     LOG_PRINTF(LOG_STREAM, "DNS Header\n");
     
     LOG_PRINTF(LOG_STREAM, "   |-Identifier                         0x%04" PRIx16   "          (%" PRIu16 ")\n",     dns_header->id,           dns_header->id);
@@ -169,15 +168,70 @@ log_dns_header(const dns_header_t *dns_header)
     LOG_PRINTF(LOG_STREAM, "      |-Checking Disabled    (cd)       %s\n",                                           dns_header->flags.cd ? "set" : "not set");
     LOG_PRINTF(LOG_STREAM, "      |-Response Code        (rcode)    %s (%" PRIu16 ")\n",               log_dns_rcode(dns_header->flags.rcode), dns_header->flags.rcode);
     LOG_PRINTF(LOG_STREAM, "   |-Questions                          %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->qd_count,  dns_header->qd_count);
-    for (idx = 0; idx < dns_header->qd_count; idx++) {
-
-        LOG_PRINTF(LOG_STREAM, "      |-Name                            %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->qd_count,  dns_header->qd_count);
-        LOG_PRINTF(LOG_STREAM, "      |-Type                            %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->qd_count,  dns_header->qd_count);
-        LOG_PRINTF(LOG_STREAM, "      |-Class                           %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->qd_count,  dns_header->qd_count);
-    }
+    log_dns_queries(dns_header->qd_count, dns_header->qd);
     LOG_PRINTF(LOG_STREAM, "   |-Answer RRs                         %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->an_count,  dns_header->an_count);
+    log_dns_resource_records(dns_header->an_count, dns_header->an);
     LOG_PRINTF(LOG_STREAM, "   |-Authority RRs                      %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->ns_count,  dns_header->ns_count);
+    log_dns_resource_records(dns_header->ns_count, dns_header->ns);
     LOG_PRINTF(LOG_STREAM, "   |-Additional RRs                     %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->ar_count,  dns_header->ar_count);
+    log_dns_resource_records(dns_header->ar_count, dns_header->ar);
+}
+
+void
+log_dns_queries(const uint16_t count, const dns_query_t *query)
+{
+    uint16_t        idx;
+    char            domain[DNS_DOMAIN_MAX_LEN];
+    
+    for (idx = 0; idx < count; idx++, query = query->next) {
+        dns_convert_to_domain(domain, query->qname);
+        
+        LOG_PRINTF(LOG_STREAM, "      |-Query %" PRIu16 "\n",                   idx + 1);        
+        LOG_PRINTF(LOG_STREAM, "         |-Name                         %s\n",  domain);
+        LOG_PRINTF(LOG_STREAM, "         |-Type                         %s\n",  log_dns_type(query->qtype));
+        LOG_PRINTF(LOG_STREAM, "         |-Class                        %s\n",  log_dns_class(query->qclass));
+    }
+}
+
+void
+log_dns_resource_records(const uint16_t count, const dns_rr_t *rr)
+{
+    uint16_t        idx;
+    char            domain[DNS_DOMAIN_MAX_LEN];
+    
+    for (idx = 0; idx < count; idx++, rr = rr->next) {
+        dns_convert_to_domain(domain, rr->name);
+        
+        LOG_PRINTF(LOG_STREAM, "      |-Resource Record %" PRIu16 "\n",         idx + 1);        
+        LOG_PRINTF(LOG_STREAM, "         |-Name                         %s\n",  domain);
+        LOG_PRINTF(LOG_STREAM, "         |-Type                         %s\n",  log_dns_type(rr->type));
+        LOG_PRINTF(LOG_STREAM, "         |-Class                        %s\n",  log_dns_class(rr->klass));
+        
+        switch (rr->type) {
+            case DNS_TYPE_A:           {
+                                        LOG_IPV4(&(rr->a.ipv4_address), ipv4_address_str);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Address                      %s\n", ipv4_address_str);
+                                        }
+                                        break;
+                                        
+            case DNS_TYPE_NS:        
+            case DNS_TYPE_MD:        
+            case DNS_TYPE_MF:        
+            case DNS_TYPE_CNAME:     
+            case DNS_TYPE_SOA:       
+            case DNS_TYPE_MB:        
+            case DNS_TYPE_MG:                                                             
+            case DNS_TYPE_MR:        
+            case DNS_TYPE_NULL:      
+            case DNS_TYPE_WKS:       
+            case DNS_TYPE_PTR:       
+            case DNS_TYPE_HINFO:     
+            case DNS_TYPE_MINFO:     
+            case DNS_TYPE_MX:        
+            case DNS_TYPE_TXT:       
+            default:                    break;;
+        }
+    }
 }
 
 /*** TO STRING ***************************************************************/
@@ -325,22 +379,41 @@ log_dns_rcode(const uint16_t rcode)
 const char *
 log_dns_type(const uint16_t type) {
     switch (type) {
-        case DNS_RR_TYPE_A:             return "";
-        case DNS_RR_TYPE_NS:            return "";
-        case DNS_RR_TYPE_MD:            return "";
-        case DNS_RR_TYPE_MF:            return "";
-        case DNS_RR_TYPE_CNAME:         return "";
-        case DNS_RR_TYPE_SOA:           return "";
-        case DNS_RR_TYPE_MB:            return "";
-        case DNS_RR_TYPE_MG:            return "";
-        case DNS_RR_TYPE_MR:            return "";
-        case DNS_RR_TYPE_NULL:          return "";
-        case DNS_RR_TYPE_WKS:           return "";
-        case DNS_RR_TYPE_PTR:           return "";
-        case DNS_RR_TYPE_HINFO:         return "";
-        case DNS_RR_TYPE_MINFO:         return "";
-        case DNS_RR_TYPE_MX:            return "";
-        case DNS_RR_TYPE_TXT:           return "";
+        case DNS_TYPE_A:                return "A (Address)";
+        case DNS_TYPE_NS:               return "NS (Name Server)";
+        case DNS_TYPE_MD:               return "MD (Mail Destination)";
+        case DNS_TYPE_MF:               return "MF (Mail Forward)";
+        case DNS_TYPE_CNAME:            return "CNAME (Canonical Name)";
+        case DNS_TYPE_SOA:              return "SOA (Start of Authority)";
+        case DNS_TYPE_MB:               return "MB (Mailbox)";
+        case DNS_TYPE_MG:               return "MG (Mail Group)";
+        case DNS_TYPE_MR:               return "MR (Mail Rename)";
+        case DNS_TYPE_NULL:             return "NULL (null RR)";
+        case DNS_TYPE_WKS:              return "WKS (Well Known Service)";
+        case DNS_TYPE_PTR:              return "PTR (Domain Name Pointer)";
+        case DNS_TYPE_HINFO:            return "HINFO (Host Information)";
+        case DNS_TYPE_MINFO:            return "MINFO (Mailbox Information)";
+        case DNS_TYPE_MX:               return "MX (Mail Exchange)";
+        case DNS_TYPE_TXT:              return "TXT (Text String)";
+        case DNS_TYPE_SIG:              return "SIG";
+        case DNS_TYPE_KEY:              return "KEY";
+        case DNS_TYPE_NXT:              return "NXT";
+        case DNS_TYPE_OPT:              return "OPT";
+        case DNS_TYPE_DS:               return "DS (Delegation Signer)";
+        case DNS_TYPE_RRSIG:            return "RRSIG";
+        case DNS_TYPE_NSEC:             return "NSEC";
+        case DNS_TYPE_DNSKEY:           return "DNSKEY";
+        case DNS_TYPE_NSEC3:            return "NSEC3";
+        case DNS_TYPE_ANY:              return "ANY (All Records)";
         default:                        return "Unknow";
     }
 }
+
+const char *
+log_dns_class(const uint16_t klass) {
+    switch (klass) {
+        case DNS_CLASS_IN:              return "IN (Internet)";
+        default:                        return "Unknow";
+    }
+}
+

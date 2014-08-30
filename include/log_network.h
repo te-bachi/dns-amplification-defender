@@ -47,6 +47,9 @@ void        log_ipv4_header         (const ipv4_header_t            *ipv4_header
 void        log_udpv4_header        (const udpv4_header_t           *udpv4_header);
 void        log_dns_header          (const dns_header_t             *dns_header);
 
+void        log_dns_queries         (const uint16_t count, const dns_query_t *query);
+void        log_dns_resource_records(const uint16_t count, const dns_rr_t    *rr);
+
 /* to string */
 void        log_mac                 (const mac_address_t            *mac,   uint8_t *str);
 void        log_ipv4                (const ipv4_address_t           *ipv4,  uint8_t *str);
@@ -59,5 +62,7 @@ const char *log_ip_port             (const uint16_t port);
 const char *log_dns_opcode          (const uint16_t opcode);
 const char *log_dns_rcode           (const uint16_t rcode);
 const char *log_dns_type            (const uint16_t type);
+const char *log_dns_class           (const uint16_t klass);
+
 #endif
 

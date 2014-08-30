@@ -52,6 +52,8 @@ typedef struct _dns_rr_opt_t        dns_rr_opt_t;
 #define DNS_HEADER_RCODE_BAD_ALGORITHM      21
 #define DNS_HEADER_RCODE_BAD_TRUNCATION     22
 
+#define DNS_DOMAIN_MAX_LEN                  253
+
 #define DNS_LABEL_MAX_LEN                   63
 #define DNS_LABEL_POINTER_MASK              0xc0
 
@@ -76,31 +78,44 @@ typedef struct _dns_rr_opt_t        dns_rr_opt_t;
 #define DNS_RR_OFFSET_RDLENGTH              8
 #define DNS_RR_SIZE                         10
 
-typedef enum _dns_rr_type_t {
-    DNS_RR_TYPE_A                       =   1,
-    DNS_RR_TYPE_NS                      =   2,
-    DNS_RR_TYPE_MD                      =   3,
-    DNS_RR_TYPE_MF                      =   4,
-    DNS_RR_TYPE_CNAME                   =   5,
-    DNS_RR_TYPE_SOA                     =   6,
-    DNS_RR_TYPE_MB                      =   7,
-    DNS_RR_TYPE_MG                      =   8,
-    DNS_RR_TYPE_MR                      =   9,
-    DNS_RR_TYPE_NULL                    =   10,
-    DNS_RR_TYPE_WKS                     =   11,
-    DNS_RR_TYPE_PTR                     =   12,
-    DNS_RR_TYPE_HINFO                   =   13,
-    DNS_RR_TYPE_MINFO                   =   14,
-    DNS_RR_TYPE_MX                      =   15,
-    DNS_RR_TYPE_TXT                     =   16
-} dns_rr_type_t;
+#define DNS_TYPE_A                          1
+#define DNS_TYPE_NS                         2
+#define DNS_TYPE_MD                         3
+#define DNS_TYPE_MF                         4
+#define DNS_TYPE_CNAME                      5
+#define DNS_TYPE_SOA                        6
+#define DNS_TYPE_MB                         7
+#define DNS_TYPE_MG                         8
+#define DNS_TYPE_MR                         9
+#define DNS_TYPE_NULL                       10
+#define DNS_TYPE_WKS                        11
+#define DNS_TYPE_PTR                        12
+#define DNS_TYPE_HINFO                      13
+#define DNS_TYPE_MINFO                      14
+#define DNS_TYPE_MX                         15
+#define DNS_TYPE_TXT                        16
+/* RFC 2535 */
+#define DNS_TYPE_SIG                        24
+#define DNS_TYPE_KEY                        25
+#define DNS_TYPE_NXT                        30
+/* RFC 6891 */
+#define DNS_TYPE_OPT                        41
+/* RFC 3755 */
+#define DNS_TYPE_DS                         43
+/* RFC 4034 */
+#define DNS_TYPE_RRSIG                      46
+#define DNS_TYPE_NSEC                       47
+#define DNS_TYPE_DNSKEY                     48
+/* RFC 5155 */
+#define DNS_TYPE_NSEC3                      50
+#define DNS_TYPE_ANY                        255
 
-typedef enum _dns_rr_class_t {
-    DNS_RR_CLASS_IN                     =   1,
-    DNS_RR_CLASS_CS                     =   2,
-    DNS_RR_CLASS_CH                     =   3,
-    DNS_RR_CLASS_HS                     =   4
-} dns_rr_class_t;
+#define DNS_CLASS_IN                        1
+#define DNS_CLASS_CS                        2
+#define DNS_CLASS_CH                        3
+#define DNS_CLASS_HS                        4
+#define DNS_CLASS_ANY                       255
+
 
 /**
  *  +---------------------+
@@ -425,6 +440,9 @@ void            dns_query_free      (dns_query_t *query);
 
 dns_rr_t       *dns_rr_new          (void);
 void            dns_rr_free         (dns_rr_t *resource_record);
+
+void            dns_convert_to_domain(char *domain, const dns_label_t *label);
+void            dns_convert_to_label_list(dns_label_t **label, const char *domain);
 
 packet_len_t    dns_header_encode   (netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset);
 header_t       *dns_header_decode   (netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset);

@@ -96,58 +96,6 @@ dns_label_free(dns_label_t *label)
     /* TODO: free current label */
 }
 
-/*****************************************************************************
- * Query
- */
-dns_query_t *
-dns_query_new(void)
-{
-    return &query[query_idx++];
-}
-
-void 
-dns_query_free(dns_query_t *query)
-{
-    
-}
-
-/*****************************************************************************
- * Resource Record
- */
-dns_rr_t *
-dns_rr_new()
-{
-    /*
-    switch (type) {
-        case DNS_RR_TYPE_A:     return (dns_resource_record_t *) &a[a_idx++];
-        case DNS_RR_TYPE_NS:    return (dns_resource_record_t *) &ns[ns_idx++];
-        case DNS_RR_TYPE_CNAME: return (dns_resource_record_t *) &cname[cname_idx++];
-        case DNS_RR_TYPE_SOA:   return (dns_resource_record_t *) &soa[soa_idx++];
-        case DNS_RR_TYPE_PTR:   return (dns_resource_record_t *) &ptr[ptr_idx++];
-        default:                return NULL;
-    }
-    */
-    
-    return &rr[rr_idx++];
-}
-
-void
-dns_rr_free(dns_rr_t *rr)
-{
-    
-}
-
-
-packet_len_t
-dns_header_encode(netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset)
-{
-    packet_len_t    len;
-    len = 0;
-    
-    return len;
-}
-
-
 /**
  *
  *
@@ -215,6 +163,21 @@ dns_header_decode_label(raw_packet_t *raw_packet, packet_offset_t header_offset,
     return true;
 }
 
+/*****************************************************************************
+ * Query
+ */
+dns_query_t *
+dns_query_new(void)
+{
+    return &query[query_idx++];
+}
+
+void 
+dns_query_free(dns_query_t *query)
+{
+    
+}
+
 static bool
 dns_header_decode_query(raw_packet_t *raw_packet, packet_offset_t header_offset, packet_offset_t *field_offset, uint16_t count, dns_query_t *query)
 {
@@ -256,6 +219,32 @@ dns_header_decode_query(raw_packet_t *raw_packet, packet_offset_t header_offset,
     return true;
 }
 
+/*****************************************************************************
+ * Resource Record
+ */
+dns_rr_t *
+dns_rr_new()
+{
+    /*
+    switch (type) {
+        case DNS_RR_TYPE_A:     return (dns_resource_record_t *) &a[a_idx++];
+        case DNS_RR_TYPE_NS:    return (dns_resource_record_t *) &ns[ns_idx++];
+        case DNS_RR_TYPE_CNAME: return (dns_resource_record_t *) &cname[cname_idx++];
+        case DNS_RR_TYPE_SOA:   return (dns_resource_record_t *) &soa[soa_idx++];
+        case DNS_RR_TYPE_PTR:   return (dns_resource_record_t *) &ptr[ptr_idx++];
+        default:                return NULL;
+    }
+    */
+    
+    return &rr[rr_idx++];
+}
+
+void
+dns_rr_free(dns_rr_t *rr)
+{
+    
+}
+
 static bool
 dns_header_decode_rr(raw_packet_t *raw_packet, packet_offset_t header_offset, packet_offset_t *field_offset, uint16_t count, dns_rr_t *rr)
 {
@@ -295,6 +284,60 @@ dns_header_decode_rr(raw_packet_t *raw_packet, packet_offset_t header_offset, pa
     }
 
     return true;
+}
+
+/*****************************************************************************
+ * Convert
+ */
+
+/**
+ *
+ * @param   domain          returns an already allocated character string
+ * @param   label           converts a list of labels into a domain
+ * @return                  
+ */
+void
+dns_convert_to_domain(char *domain, const dns_label_t *label)
+{
+    uint32_t idx = 0;
+    
+    while (label->value[0] != 0) {
+        strncpy(&(domain[idx]), (const char *) label->value, label->len);
+        idx += label->len;
+        
+        if (label->next->value[0] != 0) {
+            domain[idx] = '.';
+            idx         += 1;
+        }
+        
+        label = label->next;
+    }
+    domain[idx] = '\0';
+}
+
+
+/**
+ *
+ * @param   label           returns a newly allocated label
+ * @param   domain          converts a domain into a list of labels
+ * @return                  
+ */
+void
+dns_convert_to_label_list(dns_label_t **label, const char *domain)
+{
+    
+}
+
+/*****************************************************************************
+ * Encode / Decode
+ */
+packet_len_t
+dns_header_encode(netif_t *netif, packet_t *packet, raw_packet_t *raw_packet, packet_offset_t offset)
+{
+    packet_len_t    len;
+    len = 0;
+    
+    return len;
 }
 
 header_t *
