@@ -168,12 +168,16 @@ log_dns_header(const dns_header_t *dns_header)
     LOG_PRINTF(LOG_STREAM, "      |-Checking Disabled    (cd)       %s\n",                                           dns_header->flags.cd ? "set" : "not set");
     LOG_PRINTF(LOG_STREAM, "      |-Response Code        (rcode)    %s (%" PRIu16 ")\n",               log_dns_rcode(dns_header->flags.rcode), dns_header->flags.rcode);
     LOG_PRINTF(LOG_STREAM, "   |-Questions                          %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->qd_count,  dns_header->qd_count);
-    log_dns_queries(dns_header->qd_count, dns_header->qd);
     LOG_PRINTF(LOG_STREAM, "   |-Answer RRs                         %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->an_count,  dns_header->an_count);
-    log_dns_resource_records(dns_header->an_count, dns_header->an);
     LOG_PRINTF(LOG_STREAM, "   |-Authority RRs                      %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->ns_count,  dns_header->ns_count);
-    log_dns_resource_records(dns_header->ns_count, dns_header->ns);
     LOG_PRINTF(LOG_STREAM, "   |-Additional RRs                     %-4" PRIu16   "            (0x%04" PRIx16 ")\n", dns_header->ar_count,  dns_header->ar_count);
+    LOG_PRINTF(LOG_STREAM, "   |-Questions\n");
+    log_dns_queries(dns_header->qd_count, dns_header->qd);
+    LOG_PRINTF(LOG_STREAM, "   |-Answer RRs\n");
+    log_dns_resource_records(dns_header->an_count, dns_header->an);
+    LOG_PRINTF(LOG_STREAM, "   |-Authority RRs\n");
+    log_dns_resource_records(dns_header->ns_count, dns_header->ns);
+    LOG_PRINTF(LOG_STREAM, "   |-Additional RRs\n");
     log_dns_resource_records(dns_header->ar_count, dns_header->ar);
 }
 
@@ -205,31 +209,47 @@ log_dns_resource_records(const uint16_t count, const dns_rr_t *rr)
         LOG_PRINTF(LOG_STREAM, "      |-Resource Record %" PRIu16 "\n",         idx + 1);        
         LOG_PRINTF(LOG_STREAM, "         |-Name                         %s\n",  domain);
         LOG_PRINTF(LOG_STREAM, "         |-Type                         %s\n",  log_dns_type(rr->type));
-        LOG_PRINTF(LOG_STREAM, "         |-Class                        %s\n",  log_dns_class(rr->klass));
         
+        if (rr->type != DNS_TYPE_OPT) {
+            LOG_PRINTF(LOG_STREAM, "         |-Class                        %s\n",  log_dns_class(rr->klass));
+        }
+
         switch (rr->type) {
-            case DNS_TYPE_A:           {
+            case DNS_TYPE_A:            {
                                         LOG_IPV4(&(rr->a.ipv4_address), ipv4_address_str);
                                         LOG_PRINTF(LOG_STREAM, "         |-Address                      %s\n", ipv4_address_str);
                                         }
                                         break;
                                         
-            case DNS_TYPE_NS:        
-            case DNS_TYPE_MD:        
-            case DNS_TYPE_MF:        
-            case DNS_TYPE_CNAME:     
-            case DNS_TYPE_SOA:       
-            case DNS_TYPE_MB:        
-            case DNS_TYPE_MG:                                                             
-            case DNS_TYPE_MR:        
-            case DNS_TYPE_NULL:      
-            case DNS_TYPE_WKS:       
-            case DNS_TYPE_PTR:       
-            case DNS_TYPE_HINFO:     
-            case DNS_TYPE_MINFO:     
-            case DNS_TYPE_MX:        
-            case DNS_TYPE_TXT:       
-            default:                    break;;
+            case DNS_TYPE_NS:           dns_convert_to_domain(domain, rr->ns.nsdname);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Name Server                  %s\n", domain);
+                                        break;
+
+            case DNS_TYPE_CNAME:        dns_convert_to_domain(domain, rr->ns.nsdname);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Canonical Name               %s\n", domain);
+                                        break;
+
+            case DNS_TYPE_SOA:          dns_convert_to_domain(domain, rr->soa.mname);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Primary Name Server          %s\n", domain);
+                                        dns_convert_to_domain(domain, rr->soa.rname);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Responsible Mailbox          %s\n", domain);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Serial Number                %u\n", rr->soa.serial);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Refresh Interval             %u\n", rr->soa.refresh);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Retry Interval               %u\n", rr->soa.retry);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Expire Limit                 %u\n", rr->soa.expire);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Minimum TTL                  %u\n", rr->soa.minimum);
+                                        break;
+
+            case DNS_TYPE_PTR:          dns_convert_to_domain(domain, rr->ptr.ptrdname);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Domain Name                  %s\n", domain);
+                                        break;
+
+            case DNS_TYPE_MX:           dns_convert_to_domain(domain, rr->mx.exchange);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Preference                   %u\n", rr->mx.preference);
+                                        LOG_PRINTF(LOG_STREAM, "         |-Exchange                     %s\n", domain);
+                                        break;
+            case DNS_TYPE_OPT:
+            default:                    break;
         }
     }
 }

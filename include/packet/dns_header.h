@@ -10,6 +10,7 @@ typedef struct _dns_rr_ns_t         dns_rr_ns_t;
 typedef struct _dns_rr_a_t          dns_rr_a_t;
 typedef struct _dns_rr_cname_t      dns_rr_cname_t;
 typedef struct _dns_rr_ptr_t        dns_rr_ptr_t;
+typedef struct _dns_rr_mx_t         dns_rr_mx_t;
 typedef struct _dns_rr_opt_t        dns_rr_opt_t;
 
 #include "packet/packet.h"
@@ -77,6 +78,16 @@ typedef struct _dns_rr_opt_t        dns_rr_opt_t;
 #define DNS_RR_OFFSET_TTL                   4
 #define DNS_RR_OFFSET_RDLENGTH              8
 #define DNS_RR_SIZE                         10
+
+#define DNS_RR_SOA_OFFSET_SERIAL            0
+#define DNS_RR_SOA_OFFSET_REFRESH           4
+#define DNS_RR_SOA_OFFSET_RETRY             8
+#define DNS_RR_SOA_OFFSET_EXPIRE            12
+#define DNS_RR_SOA_OFFSET_MINIMUM           16
+#define DNS_RR_SOA_SIZE                     20
+
+#define DNS_RR_MX_OFFSET_PREFERENCE         0
+#define DNS_RR_MX_SIZE                      2
 
 #define DNS_TYPE_A                          1
 #define DNS_TYPE_NS                         2
@@ -338,8 +349,16 @@ struct _dns_rr_soa_t {
  */
 struct _dns_rr_ns_t {
     DNS_RR
+    dns_label_t                    *nsdname;
 };
 
+/**
+ *  IPv4 Internet Address
+ *
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |                    ADDRESS                    |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ */
 struct _dns_rr_a_t {
     DNS_RR
     ipv4_address_t                  ipv4_address;
@@ -357,7 +376,7 @@ struct _dns_rr_a_t {
  */
 struct _dns_rr_cname_t {
     DNS_RR
-    char                           *cname;
+    dns_label_t                    *cname;
 };
 
 /**
@@ -371,7 +390,29 @@ struct _dns_rr_cname_t {
  */
 struct _dns_rr_ptr_t {
     DNS_RR
-    char                           *ptrdname;
+    dns_label_t                    *ptrdname;
+};
+
+/**
+ *  Mail Exchange (MX)
+ *
+ *  A <domain-name> which specifies a host willing to act as
+ *  a mail exchange for the owner name.
+ *  The integer specifies the preference given to
+ *  this RR among others at the same owner.
+ *  Lower values are preferred.
+ *
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |                  PREFERENCE                   |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  /                   EXCHANGE                    /
+ *  /                                               /
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ */
+struct _dns_rr_mx_t {
+    DNS_RR
+    uint16_t                        preference;
+    dns_label_t                    *exchange;
 };
 
 /**
@@ -425,6 +466,7 @@ struct _dns_rr_t {
         dns_rr_a_t     a;
         dns_rr_cname_t cname;
         dns_rr_ptr_t   ptr;
+        dns_rr_mx_t    mx;
         dns_rr_opt_t   opt;
     };
 };

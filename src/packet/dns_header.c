@@ -9,6 +9,11 @@
 #define DNS_QUERY_FAILURE_EXIT
 #define DNS_FAILURE_EXIT                dns_header_free((header_t *) dns); \
                                         return NULL
+#define DNS_LABEL_NEW                   label = dns_label_new(); \
+                                        if (!dns_header_decode_label(raw_packet, header_offset, field_offset, label)) { \
+                                            dns_label_free(label); \
+                                            return false; \
+                                        }
 
 static bool dns_header_decode_label (raw_packet_t *raw_packet, packet_offset_t header_offset, packet_offset_t *field_offset, dns_label_t *label);
 static bool dns_header_decode_query (raw_packet_t *raw_packet, packet_offset_t header_offset, packet_offset_t *field_offset, uint16_t count, dns_query_t *query);
@@ -38,7 +43,7 @@ static header_storage_t         storage = {
     .init               = &entry
 };
 
-static dns_label_t              label[32];
+static dns_label_t              label[64];
 static uint16_t                 label_idx = 0;
 
 static dns_query_t              query[32];
@@ -98,6 +103,7 @@ dns_label_free(dns_label_t *label)
 
 /**
  *
+ * @param   field_offset        offset of the start of the label (len or pointer)
  *
  * TODO: check offset range and return false if out-of-range!
  */
@@ -111,9 +117,8 @@ dns_header_decode_label(raw_packet_t *raw_packet, packet_offset_t header_offset,
     valid           = true;
 
     do {
-        LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("decode DNS label: offset %u/%x", *field_offset, *field_offset));
 
-        /* test */
+        /* len */
         len = raw_packet->data[*field_offset + DNS_LABEL_OFFSET_LEN];
 
         /* it's a pointer? */
@@ -122,12 +127,8 @@ dns_header_decode_label(raw_packet_t *raw_packet, packet_offset_t header_offset,
             /* fetch the whole pointer (16-bit) */
             uint8_to_uint16(&pointer,  &(raw_packet->data[*field_offset + DNS_QUERY_OFFSET_QTYPE]));
 
-            LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("decode DNS label: pointer raw = %u", pointer));
-
             /* mask pointer flag => only pointer value left */
             pointer &= ~(DNS_LABEL_POINTER_MASK << 8);
-
-            LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("decode DNS label: pointer stripped = %u", pointer));
 
             /* add header offset */
             pointer += header_offset;
@@ -144,8 +145,6 @@ dns_header_decode_label(raw_packet_t *raw_packet, packet_offset_t header_offset,
             label->len = len;
 
             memcpy(label->value,  &(raw_packet->data[*field_offset + DNS_LABEL_OFFSET_VALUE]), label->len);
-
-            LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("decode DNS label: len = %u, value = %.*s", label->len, label->len, label->value));
 
             *field_offset  += DNS_LABEL_SIZE_LEN + label->len;
             label->next     = dns_label_new();
@@ -183,9 +182,7 @@ dns_header_decode_query(raw_packet_t *raw_packet, packet_offset_t header_offset,
 {
     dns_label_t    *label;
 
-
     for (; count > 0; count--) {
-        LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("decode DNS query: offset %u/%x", *field_offset, *field_offset));
 
         if (raw_packet->len < (*field_offset + DNS_QUERY_MIN_LEN)) {
             LOG_PRINTLN(LOG_HEADER_DNS, LOG_ERROR, ("decode DNS query: size too small (present=%" PRIoffset ", required=%" PRIoffset ", offset=%" PRIoffset "/%x)", raw_packet->len - *field_offset, DNS_QUERY_MIN_LEN, *field_offset, *field_offset));
@@ -204,8 +201,6 @@ dns_header_decode_query(raw_packet_t *raw_packet, packet_offset_t header_offset,
         /* qtype + qclass */
         uint8_to_uint16(&(query->qtype),  &(raw_packet->data[*field_offset + DNS_QUERY_OFFSET_QTYPE]));
         uint8_to_uint16(&(query->qclass), &(raw_packet->data[*field_offset + DNS_QUERY_OFFSET_QCLASS]));
-
-        LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("Query type = %u, klass = %u", query->qtype, query->qclass));
 
         *field_offset += DNS_QUERY_SIZE;
 
@@ -251,7 +246,6 @@ dns_header_decode_rr(raw_packet_t *raw_packet, packet_offset_t header_offset, pa
     dns_label_t    *label;
 
     for (; count > 0; count--) {
-        LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("decode DNS resource record: offset %u/%x", *field_offset, *field_offset));
 
         if (raw_packet->len < (*field_offset + DNS_RR_MIN_LEN)) {
             LOG_PRINTLN(LOG_HEADER_DNS, LOG_ERROR, ("decode DNS resource record: size too small (present=%" PRIoffset ", required=%" PRIoffset ", offset=%" PRIoffset "/%x)", raw_packet->len, *field_offset + DNS_RR_MIN_LEN, *field_offset, *field_offset));
@@ -259,12 +253,7 @@ dns_header_decode_rr(raw_packet_t *raw_packet, packet_offset_t header_offset, pa
         }
 
         /* name */
-        label = dns_label_new();
-
-        if (!dns_header_decode_label(raw_packet, header_offset, field_offset, label)) {
-            dns_label_free(label);
-            return false;
-        }
+        DNS_LABEL_NEW
         rr->name = label;
 
         uint8_to_uint16(&(rr->type),     &(raw_packet->data[*field_offset + DNS_RR_OFFSET_TYPE]));        /**< Type */
@@ -272,9 +261,52 @@ dns_header_decode_rr(raw_packet_t *raw_packet, packet_offset_t header_offset, pa
         uint8_to_uint32(&(rr->ttl),      &(raw_packet->data[*field_offset + DNS_RR_OFFSET_TTL]));         /**< TTL */
         uint8_to_uint16(&(rr->rdlength), &(raw_packet->data[*field_offset + DNS_RR_OFFSET_RDLENGTH]));    /**< RD Length */
 
-        LOG_PRINTLN(LOG_HEADER_DNS, LOG_DEBUG, ("RR type = %u, klass = %u, ttl = %u, rdlength = %u", rr->type, rr->klass, rr->ttl, rr->rdlength));
+        *field_offset += DNS_RR_SIZE;
 
-        *field_offset += DNS_RR_SIZE + rr->rdlength;
+        /* decode type */
+        /* TODO: check offset range and return false if out-of-range! */
+        switch (rr->type) {
+            case DNS_TYPE_A:            memcpy(&(rr->a.ipv4_address), &(raw_packet->data[*field_offset]),  rr->rdlength);
+                                        *field_offset += rr->rdlength;
+                                        break;
+
+            case DNS_TYPE_NS:           DNS_LABEL_NEW
+                                        rr->ns.nsdname = label;
+                                        break;
+
+            case DNS_TYPE_CNAME:        DNS_LABEL_NEW
+                                        rr->cname.cname = label;
+                                        break;
+
+            case DNS_TYPE_SOA:          DNS_LABEL_NEW
+                                        rr->soa.mname = label;
+                                        DNS_LABEL_NEW
+                                        rr->soa.rname = label;
+
+                                        uint8_to_uint32(&(rr->soa.serial),  &(raw_packet->data[*field_offset + DNS_RR_SOA_OFFSET_SERIAL]));
+                                        uint8_to_uint32(&(rr->soa.refresh), &(raw_packet->data[*field_offset + DNS_RR_SOA_OFFSET_REFRESH]));
+                                        uint8_to_uint32(&(rr->soa.retry),   &(raw_packet->data[*field_offset + DNS_RR_SOA_OFFSET_RETRY]));
+                                        uint8_to_uint32(&(rr->soa.expire),  &(raw_packet->data[*field_offset + DNS_RR_SOA_OFFSET_EXPIRE]));
+                                        uint8_to_uint32(&(rr->soa.minimum), &(raw_packet->data[*field_offset + DNS_RR_SOA_OFFSET_MINIMUM]));
+
+                                        *field_offset += DNS_RR_SOA_SIZE;
+                                        break;
+
+            case DNS_TYPE_PTR:          DNS_LABEL_NEW
+                                        rr->ptr.ptrdname = label;
+                                        break;
+
+            case DNS_TYPE_MX:           uint8_to_uint16(&(rr->mx.preference),  &(raw_packet->data[*field_offset + DNS_RR_MX_OFFSET_PREFERENCE]));
+                                        *field_offset += DNS_RR_MX_SIZE;
+
+                                        DNS_LABEL_NEW
+                                        rr->mx.exchange = label;
+                                        break;
+
+            case DNS_TYPE_OPT:
+            default:                    *field_offset += rr->rdlength;
+                                        break;
+        }
 
         /* not the last resource record */
         if (count > 1) {
@@ -291,6 +323,8 @@ dns_header_decode_rr(raw_packet_t *raw_packet, packet_offset_t header_offset, pa
  */
 
 /**
+ * Converts a list of labels into a domain string.
+ * Both arguments have to be re-allocated.
  *
  * @param   domain          returns an already allocated character string
  * @param   label           converts a list of labels into a domain
@@ -300,23 +334,32 @@ void
 dns_convert_to_domain(char *domain, const dns_label_t *label)
 {
     uint32_t idx = 0;
+    static const char root[] = "<Root>";
     
-    while (label->value[0] != 0) {
-        strncpy(&(domain[idx]), (const char *) label->value, label->len);
-        idx += label->len;
-        
-        if (label->next->value[0] != 0) {
-            domain[idx] = '.';
-            idx         += 1;
+    if (label->value[0] != 0) {
+        while (label->value[0] != 0) {
+            strncpy(&(domain[idx]), (const char *) label->value, label->len);
+            idx += label->len;
+
+            if (label->next->value[0] != 0) {
+                domain[idx] = '.';
+                idx         += 1;
+            }
+
+            label = label->next;
         }
-        
-        label = label->next;
+    } else {
+        strncpy(&(domain[idx]), root, sizeof(root));
+        idx += sizeof(root);
     }
     domain[idx] = '\0';
 }
 
 
 /**
+ * Converts a domain string into a list of labels.
+ * The domain string is re-allocated. The list of labels will be allocated
+ * in the function itself.
  *
  * @param   label           returns a newly allocated label
  * @param   domain          converts a domain into a list of labels
